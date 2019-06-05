@@ -1,0 +1,11 @@
+i18n:
+	debugger: no
+	profiles:
+		foo:
+			language: [ en_US ]
+			currency: [ EUR, USD, GBP ]
+			country: [ GB, USA ]
+		bar:
+			language: [ cs_CZ ]
+			currency: [ CZK ]
+			country: [ CZ ]

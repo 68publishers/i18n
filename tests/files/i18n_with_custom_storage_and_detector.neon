@@ -1,0 +1,9 @@
+i18n:
+	debugger: no
+	profiles:
+		default:
+			language: [ cs_CZ, sk_SK ]
+			currency: [ CZK, EUR ]
+			country: [ CZ, SK ]
+	storage: SixtyEightPublishers\i18n\Tests\Fixture\DummyProfileStorage
+	detector: SixtyEightPublishers\i18n\Tests\Fixture\DummyDetector(foo)

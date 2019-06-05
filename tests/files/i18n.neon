@@ -1,0 +1,18 @@
+i18n:
+	debugger: no
+	profiles:
+		foo:
+			language: [ en_US ]
+			currency: [ EUR, USD, GBP ]
+			country: [ GB, USA ]
+			domain: [ 'example\.com\/foo\/' ]
+		default:
+			language: [ cs_CZ, sk_SK ]
+			currency: [ CZK, EUR ]
+			country: [ CZ, SK ]
+		bar:
+			language: de_DE
+			currency: EUR
+			country: DE
+			domain: 'example\.com\/bar\/'
+			enabled: no
