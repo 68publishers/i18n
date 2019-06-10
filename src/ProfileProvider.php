@@ -60,7 +60,7 @@ final class ProfileProvider implements IProfileProvider
 	 */
 	private function getUniqueElements(callable $cb): array
 	{
-		return array_values(array_unique(array_merge(...array_map($cb, $this->profileContainer->toArray()))));
+		return array_values(array_unique(array_merge(...array_values(array_map($cb, $this->profileContainer->toArray())))));
 	}
 
 	/************* interface \SixtyEightPublishers\i18n\IProfileProvider *************/
