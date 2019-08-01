@@ -17,6 +17,11 @@ final class I18nExtension extends Nette\DI\CompilerExtension
 			'enabled' => FALSE,
 			'use_default' => FALSE,
 		],
+		'lists' => [
+			'vendorDir' => '%appDir%/../',
+			'fallback_language' => 'en',
+			'default_language' => NULL,
+		],
 		'storage' => SixtyEightPublishers\i18n\Storage\SessionProfileStorage::class,
 		'detector' => SixtyEightPublishers\i18n\Detector\NetteRequestDetector::class,
 	];
@@ -46,6 +51,11 @@ final class I18nExtension extends Nette\DI\CompilerExtension
 		Nette\Utils\Validators::assertField($config['translations'], 'use_default', 'bool');
 		Nette\Utils\Validators::assertField($config, 'storage', 'string|' . Nette\DI\Statement::class);
 		Nette\Utils\Validators::assertField($config, 'detector', 'string|' . Nette\DI\Statement::class);
+
+		Nette\Utils\Validators::assertField($config, 'lists', 'array');
+		Nette\Utils\Validators::assertField($config['lists'], 'vendorDir', 'string');
+		Nette\Utils\Validators::assertField($config['lists'], 'fallback_language', 'string');
+		Nette\Utils\Validators::assertField($config['lists'], 'default_language', 'null|string');
 
 		if (empty($profiles)) {
 			throw new SixtyEightPublishers\i18n\Exception\ConfigurationException('You must define almost one profile in your configuration.');
@@ -97,6 +107,23 @@ final class I18nExtension extends Nette\DI\CompilerExtension
 				$config['detector'],
 				$config['storage'],
 				$profileContainer,
+			]);
+
+		# register lists
+
+		$listOptions = $builder->addDefinition($this->prefix('list_options'))
+			->setType(SixtyEightPublishers\i18n\Lists\ListOptions::class)
+			->setArguments([
+				'vendorDir' => $config['lists']['vendorDir'],
+				'fallbackLanguage' => $config['lists']['fallback_language'],
+				'defaultLanguage' => $config['lists']['default_language'],
+			])
+			->setAutowired(FALSE);
+
+		$builder->addDefinition($this->prefix('list.language'))
+			->setType(SixtyEightPublishers\i18n\Lists\LanguageList::class)
+			->setArguments([
+				'options' => $listOptions,
 			]);
 
 		# register kdyby/translation integration
