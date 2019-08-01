@@ -18,7 +18,7 @@ final class I18nExtension extends Nette\DI\CompilerExtension
 			'use_default' => FALSE,
 		],
 		'lists' => [
-			'vendorDir' => '%appDir%/../',
+			'vendorDir' => '%appDir%/../vendor',
 			'fallback_language' => 'en',
 			'default_language' => NULL,
 		],
@@ -114,7 +114,7 @@ final class I18nExtension extends Nette\DI\CompilerExtension
 		$listOptions = $builder->addDefinition($this->prefix('list_options'))
 			->setType(SixtyEightPublishers\i18n\Lists\ListOptions::class)
 			->setArguments([
-				'vendorDir' => $config['lists']['vendorDir'],
+				'vendorDir' => realpath($config['lists']['vendorDir']),
 				'fallbackLanguage' => $config['lists']['fallback_language'],
 				'defaultLanguage' => $config['lists']['default_language'],
 			])
