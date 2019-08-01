@@ -135,25 +135,23 @@ abstract class AbstractList implements IList
 	 */
 	public function getList(?string $language = NULL): array
 	{
-		$locale = ($language ?? $this->language) ?? $this->options->resolvedLanguage;
+		$language = ($language ?? $this->language) ?? $this->options->resolvedLanguage;
 
-		if (isset($this->cached[$locale])) {
-			return $this->cached[$locale];
+		if (isset($this->cached[$language])) {
+			return $this->cached[$language];
 		}
 
-		if (NULL !== $language) {
-			$path = $this->createSourcePath($locale);
+		$path = $this->createSourcePath($language);
 
-			if (!file_exists($path)) {
-				return $this->getList();
-			}
-		} else {
-			$path = $this->createSourcePath($locale);
+		if (!file_exists($path)) {
+			trigger_error(sprintf(
+				'Missing lists for language %s, fallback %s is used.',
+				$language,
+				$this->options->fallbackLanguage
+			), E_USER_NOTICE);
 
-			if (!file_exists($path)) {
-				$locale = $this->options->fallbackLanguage;
-				$path = $this->createSourcePath($locale);
-			}
+			$language = $this->options->fallbackLanguage;
+			$path = $this->createSourcePath($language);
 		}
 
 		if (!file_exists($path)) {
@@ -161,6 +159,6 @@ abstract class AbstractList implements IList
 		}
 
 		/** @noinspection PhpIncludeInspection */
-		return $this->cached[$locale] = include $path;
+		return $this->cached[$language] = include $path;
 	}
 }
