@@ -4,11 +4,15 @@ declare(strict_types=1);
 
 namespace SixtyEightPublishers\i18n\Tests\Helper;
 
-use Kdyby;
-use Nette;
-use Tracy;
-use Tester;
-use SixtyEightPublishers;
+use Tester\FileMock;
+use Nette\DI\Compiler;
+use Nette\DI\Container;
+use Nette\DI\ContainerLoader;
+use Nette\Bridges\HttpDI\HttpExtension;
+use Tracy\Bridges\Nette\TracyExtension;
+use Nette\Bridges\HttpDI\SessionExtension;
+use Kdyby\Translation\DI\TranslationExtension;
+use SixtyEightPublishers\i18n\DI\I18nExtension;
 
 final class ContainerFactory
 {
@@ -18,19 +22,19 @@ final class ContainerFactory
 	 *
 	 * @return \Nette\DI\Container
 	 */
-	public static function createContainer(string $name, $config): Nette\DI\Container
+	public static function createContainer(string $name, $config): Container
 	{
 		if (!defined('TEMP_PATH')) {
 			define('TEMP_PATH', __DIR__ . '/../temp');
 		}
 
-		$loader = new Nette\DI\ContainerLoader(TEMP_PATH . '/cache/Nette.Configurator', TRUE);
-		$class = $loader->load(function (Nette\DI\Compiler $compiler) use ($config): void {
-			$compiler->addExtension('translation', new Kdyby\Translation\DI\TranslationExtension());
-			$compiler->addExtension('tracy', new Tracy\Bridges\Nette\TracyExtension());
-			$compiler->addExtension('http', new Nette\Bridges\HttpDI\HttpExtension());
-			$compiler->addExtension('session', new Nette\Bridges\HttpDI\SessionExtension());
-			$compiler->addExtension('i18n', new SixtyEightPublishers\i18n\DI\I18nExtension());
+		$loader = new ContainerLoader(TEMP_PATH . '/cache/Nette.Configurator', TRUE);
+		$class = $loader->load(static function (Compiler $compiler) use ($config): void {
+			$compiler->addExtension('translation', new TranslationExtension());
+			$compiler->addExtension('tracy', new TracyExtension());
+			$compiler->addExtension('http', new HttpExtension());
+			$compiler->addExtension('session', new SessionExtension());
+			$compiler->addExtension('i18n', new I18nExtension());
 
 			$compiler->addConfig([
 				'parameters' => [
@@ -47,7 +51,7 @@ final class ContainerFactory
 			} elseif (is_string($config) && is_file($config)) {
 				$compiler->loadConfig($config);
 			} elseif (NULL !== $config) {
-				$compiler->loadConfig(Tester\FileMock::create((string) $config, 'neon'));
+				$compiler->loadConfig(FileMock::create((string) $config, 'neon'));
 			}
 		}, $name);
 

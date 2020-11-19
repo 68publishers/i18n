@@ -4,15 +4,22 @@ declare(strict_types=1);
 
 namespace SixtyEightPublishers\i18n\Tests\Cases\Profile;
 
-use Tester;
 use Mockery;
-use SixtyEightPublishers;
+use Tester\Assert;
+use Tester\TestCase;
+use SixtyEightPublishers\i18n\ProfileProvider;
+use SixtyEightPublishers\i18n\Profile\ActiveProfile;
+use SixtyEightPublishers\i18n\Profile\ProfileInterface;
+use SixtyEightPublishers\i18n\Tests\Fixture\DummyDetector;
+use SixtyEightPublishers\i18n\Storage\ProfileStorageInterface;
+use SixtyEightPublishers\i18n\Profile\ActiveProfileChangeNotifier;
+use SixtyEightPublishers\i18n\ProfileContainer\ProfileContainerInterface;
 
 require __DIR__ . '/../bootstrap.php';
 
-final class ProfileProviderTest extends Tester\TestCase
+final class ProfileProviderTest extends TestCase
 {
-	/** @var \SixtyEightPublishers\i18n\IProfileProvider */
+	/** @var \SixtyEightPublishers\i18n\ProfileProviderInterface */
 	private $provider;
 
 	/**
@@ -20,12 +27,12 @@ final class ProfileProviderTest extends Tester\TestCase
 	 */
 	protected function setUp(): void
 	{
-		$fooProfile = Mockery::mock(SixtyEightPublishers\i18n\Profile\IProfile::class);
-		$barProfile = Mockery::mock(SixtyEightPublishers\i18n\Profile\IProfile::class);
+		$fooProfile = Mockery::mock(ProfileInterface::class);
+		$barProfile = Mockery::mock(ProfileInterface::class);
 
-		$storage = Mockery::mock(SixtyEightPublishers\i18n\Storage\IProfileStorage::class);
-		$container = Mockery::mock(SixtyEightPublishers\i18n\ProfileContainer\IProfileContainer::class);
-		$detector = new SixtyEightPublishers\i18n\Tests\Fixture\DummyDetector('foo');
+		$storage = Mockery::mock(ProfileStorageInterface::class);
+		$container = Mockery::mock(ProfileContainerInterface::class);
+		$detector = new DummyDetector('foo');
 
 		$fooProfile->shouldReceive('getLanguages')->andReturn([ 'cs_CZ', 'en_US' ]);
 		$fooProfile->shouldReceive('getCountries')->andReturn([ 'CZ', 'GB' ]);
@@ -41,13 +48,13 @@ final class ProfileProviderTest extends Tester\TestCase
 		$container->shouldReceive('toArray')->andReturn([ $fooProfile, $barProfile ]);
 		$container->shouldReceive('get')->with()->andReturn($fooProfile);
 
-		$storage->shouldReceive('makeActiveProfile')->with($fooProfile)->andReturn(new SixtyEightPublishers\i18n\Profile\ActiveProfile(
+		$storage->shouldReceive('makeActiveProfile')->with($fooProfile)->andReturn(new ActiveProfile(
 			$fooProfile,
-			new SixtyEightPublishers\i18n\Profile\ActiveProfileChangeNotifier(),
+			new ActiveProfileChangeNotifier(),
 			$storage
 		));
 
-		$this->provider = new SixtyEightPublishers\i18n\ProfileProvider($detector, $storage, $container);
+		$this->provider = new ProfileProvider($detector, $storage, $container);
 	}
 
 	/**
@@ -65,10 +72,10 @@ final class ProfileProviderTest extends Tester\TestCase
 	 */
 	public function tesGetProfile(): void
 	{
-		Tester\Assert::noError(function () {
+		Assert::noError(function () {
 			$profile = $this->provider->getProfile();
 
-			Tester\Assert::type(SixtyEightPublishers\i18n\Profile\ActiveProfile::class, $profile);
+			Assert::type(ActiveProfile::class, $profile);
 		});
 	}
 
@@ -77,7 +84,7 @@ final class ProfileProviderTest extends Tester\TestCase
 	 */
 	public function testGetAllLanguages(): void
 	{
-		Tester\Assert::equal([ 'cs_CZ', 'en_US', 'de_DE' ], $this->provider->getAllLanguages());
+		Assert::equal([ 'cs_CZ', 'en_US', 'de_DE' ], $this->provider->getAllLanguages());
 	}
 
 	/**
@@ -85,7 +92,7 @@ final class ProfileProviderTest extends Tester\TestCase
 	 */
 	public function testGetAllCountries(): void
 	{
-		Tester\Assert::equal([ 'CZ', 'GB', 'DE' ], $this->provider->getAllCountries());
+		Assert::equal([ 'CZ', 'GB', 'DE' ], $this->provider->getAllCountries());
 	}
 
 	/**
@@ -93,7 +100,7 @@ final class ProfileProviderTest extends Tester\TestCase
 	 */
 	public function testGetAllCurrencies(): void
 	{
-		Tester\Assert::equal([ 'CZK', 'GBP', 'EUR' ], $this->provider->getAllCurrencies());
+		Assert::equal([ 'CZK', 'GBP', 'EUR' ], $this->provider->getAllCurrencies());
 	}
 }
 

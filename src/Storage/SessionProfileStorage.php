@@ -4,14 +4,18 @@ declare(strict_types=1);
 
 namespace SixtyEightPublishers\i18n\Storage;
 
-use Nette;
-use SixtyEightPublishers;
+use Nette\SmartObject;
+use Nette\Http\Session;
+use SixtyEightPublishers\i18n\Profile\ActiveProfile;
+use SixtyEightPublishers\i18n\Profile\ProfileInterface;
+use SixtyEightPublishers\i18n\Exception\InvalidArgumentException;
+use SixtyEightPublishers\i18n\Profile\ActiveProfileChangeNotifier;
 
-final class SessionProfileStorage implements IProfileStorage
+final class SessionProfileStorage implements ProfileStorageInterface
 {
-	use Nette\SmartObject;
+	use SmartObject;
 
-	const SESSION_SECTION = 'SixtyEightPublishers.Application';
+	private const SESSION_SECTION = 'SixtyEightPublishers.Application';
 
 	/** @var NULL|\SixtyEightPublishers\i18n\Profile\ActiveProfile */
 	private $profile;
@@ -26,20 +30,18 @@ final class SessionProfileStorage implements IProfileStorage
 	 * @param \Nette\Http\Session                                            $session
 	 * @param \SixtyEightPublishers\i18n\Profile\ActiveProfileChangeNotifier $notifier
 	 */
-	public function __construct(Nette\Http\Session $session, SixtyEightPublishers\i18n\Profile\ActiveProfileChangeNotifier $notifier)
+	public function __construct(Session $session, ActiveProfileChangeNotifier $notifier)
 	{
 		$this->session = $session->getSection(self::SESSION_SECTION);
 		$this->notifier = $notifier;
 	}
 
-	/************* interface \SixtyEightPublishers\i18n\Storage\IProfileStorage *************/
-
 	/**
 	 * {@inheritdoc}
 	 */
-	public function makeActiveProfile(SixtyEightPublishers\i18n\Profile\IProfile $profile): SixtyEightPublishers\i18n\Profile\ActiveProfile
+	public function makeActiveProfile(ProfileInterface $profile): ActiveProfile
 	{
-		$profile = new SixtyEightPublishers\i18n\Profile\ActiveProfile($profile, $this->notifier, $this);
+		$profile = new ActiveProfile($profile, $this->notifier, $this);
 
 		if ($profile->getName() !== $this->session['profileName']) {
 			$this->session['profileName'] = $profile->getName();
@@ -60,7 +62,7 @@ final class SessionProfileStorage implements IProfileStorage
 
 			try {
 				$profile->{$method}($this->session[$item], FALSE);
-			} catch (SixtyEightPublishers\i18n\Exception\InvalidArgumentException $e) {
+			} catch (InvalidArgumentException $e) {
 				trigger_error($e->getMessage());
 			}
 		}
@@ -71,7 +73,7 @@ final class SessionProfileStorage implements IProfileStorage
 	/**
 	 * {@inheritdoc}
 	 */
-	public function persistActiveProfile(SixtyEightPublishers\i18n\Profile\ActiveProfile $profile): void
+	public function persistActiveProfile(ActiveProfile $profile): void
 	{
 		$this->session['profileName'] = $profile->getName();
 		$this->session['profileCountry'] = $profile->getCountry();

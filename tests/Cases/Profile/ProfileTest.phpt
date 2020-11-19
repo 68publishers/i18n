@@ -4,19 +4,20 @@ declare(strict_types=1);
 
 namespace SixtyEightPublishers\i18n\Tests\Cases\Profile;
 
-use Tester;
-use SixtyEightPublishers;
+use Tester\Assert;
+use Tester\TestCase;
+use SixtyEightPublishers\i18n\Profile\Profile;
 
 require __DIR__ . '/../../bootstrap.php';
 
-final class ProfileTest extends Tester\TestCase
+final class ProfileTest extends TestCase
 {
 	/**
 	 * @return void
 	 */
 	public function testProfileGetters(): void
 	{
-		$profile = new SixtyEightPublishers\i18n\Profile\Profile(
+		$profile = new Profile(
 			'foo',
 			[ 'cs_CZ', 'en_US' ],
 			[ 'CZ', 'GB' ],
@@ -25,12 +26,12 @@ final class ProfileTest extends Tester\TestCase
 			FALSE
 		);
 
-		Tester\Assert::equal('foo', $profile->getName());
-		Tester\Assert::equal([ 'cs_CZ', 'en_US' ], $profile->getLanguages());
-		Tester\Assert::equal([ 'CZ', 'GB' ], $profile->getCountries());
-		Tester\Assert::equal([ 'CZK', 'GBP' ], $profile->getCurrencies());
-		Tester\Assert::equal([ 'example\.com\/foo\/' ], $profile->getDomains());
-		Tester\Assert::equal(FALSE, $profile->isEnabled());
+		Assert::equal('foo', $profile->getName());
+		Assert::equal([ 'cs_CZ', 'en_US' ], $profile->getLanguages());
+		Assert::equal([ 'CZ', 'GB' ], $profile->getCountries());
+		Assert::equal([ 'CZK', 'GBP' ], $profile->getCurrencies());
+		Assert::equal([ 'example\.com\/foo\/' ], $profile->getDomains());
+		Assert::equal(FALSE, $profile->isEnabled());
 	}
 }
 

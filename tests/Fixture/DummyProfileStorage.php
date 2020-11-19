@@ -4,16 +4,18 @@ declare(strict_types=1);
 
 namespace SixtyEightPublishers\i18n\Tests\Fixture;
 
-use SixtyEightPublishers;
+use SixtyEightPublishers\i18n\Profile\ActiveProfile;
+use SixtyEightPublishers\i18n\Profile\ProfileInterface;
+use SixtyEightPublishers\i18n\Storage\ProfileStorageInterface;
 
-final class DummyProfileStorage implements SixtyEightPublishers\i18n\Storage\IProfileStorage
+final class DummyProfileStorage implements ProfileStorageInterface
 {
 	/*************** interface \SixtyEightPublishers\i18n\Storage\IProfileStorage ***************/
 
 	/**
 	 * {@inheritdoc}
 	 */
-	public function makeActiveProfile(SixtyEightPublishers\i18n\Profile\IProfile $profile): SixtyEightPublishers\i18n\Profile\ActiveProfile
+	public function makeActiveProfile(ProfileInterface $profile): ActiveProfile
 	{
 		throw new \RuntimeException('Not implemented, just test.');
 	}
@@ -21,7 +23,7 @@ final class DummyProfileStorage implements SixtyEightPublishers\i18n\Storage\IPr
 	/**
 	 * {@inheritdoc}
 	 */
-	public function persistActiveProfile(SixtyEightPublishers\i18n\Profile\ActiveProfile $profile): void
+	public function persistActiveProfile(ActiveProfile $profile): void
 	{
 	}
 }

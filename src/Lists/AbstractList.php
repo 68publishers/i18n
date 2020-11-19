@@ -4,12 +4,15 @@ declare(strict_types=1);
 
 namespace SixtyEightPublishers\i18n\Lists;
 
-use Nette;
-use SixtyEightPublishers;
+use ArrayIterator;
+use LogicException;
+use Nette\SmartObject;
+use SixtyEightPublishers\i18n\Exception\RuntimeException;
+use SixtyEightPublishers\i18n\Exception\InvalidArgumentException;
 
-abstract class AbstractList implements IList
+abstract class AbstractList implements ListInterface
 {
-	use Nette\SmartObject;
+	use SmartObject;
 
 	/** @var \SixtyEightPublishers\i18n\Lists\ListOptions  */
 	private $options;
@@ -49,17 +52,13 @@ abstract class AbstractList implements IList
 		);
 	}
 
-	/************ interface \IteratorAggregate ************/
-
 	/**
 	 * {@inheritdoc}
 	 */
-	public function getIterator(): \ArrayIterator
+	public function getIterator(): ArrayIterator
 	{
-		return new \ArrayIterator($this->getList());
+		return new ArrayIterator($this->getList());
 	}
-
-	/************ interface \ArrayAccess ************/
 
 	/**
 	 * {@inheritdoc}
@@ -75,7 +74,7 @@ abstract class AbstractList implements IList
 	public function offsetGet($offset): string
 	{
 		if (!$this->offsetExists($offset)) {
-			throw new SixtyEightPublishers\i18n\Exception\InvalidArgumentException(sprintf(
+			throw new InvalidArgumentException(sprintf(
 				'Item %s is not defined in list.',
 				(string) $offset
 			));
@@ -89,7 +88,7 @@ abstract class AbstractList implements IList
 	 */
 	public function offsetSet($offset, $value)
 	{
-		throw new \LogicException('Changes of statically defined list is not allowed.');
+		throw new LogicException('Changes of statically defined list is not allowed.');
 	}
 
 	/**
@@ -97,10 +96,8 @@ abstract class AbstractList implements IList
 	 */
 	public function offsetUnset($offset): void
 	{
-		throw new \LogicException('Changes of statically defined list is not allowed.');
+		throw new LogicException('Changes of statically defined list is not allowed.');
 	}
-
-	/************ interface \JsonSerializable ************/
 
 	/**
 	 * {@inheritdoc}
@@ -110,8 +107,6 @@ abstract class AbstractList implements IList
 		return $this->getList();
 	}
 
-	/************ interface \Countable ************/
-
 	/**
 	 * {@inheritdoc}
 	 */
@@ -119,8 +114,6 @@ abstract class AbstractList implements IList
 	{
 		return count($this->getList());
 	}
-
-	/************ interface \SixtyEightPublishers\i18n\Lists\IList ************/
 
 	/**
 	 * {@inheritdoc}
@@ -155,7 +148,7 @@ abstract class AbstractList implements IList
 		}
 
 		if (!file_exists($path)) {
-			throw new SixtyEightPublishers\i18n\Exception\RuntimeException('Can\'t resolve language for list.');
+			throw new RuntimeException('Can\'t resolve language for list.');
 		}
 
 		/** @noinspection PhpIncludeInspection */

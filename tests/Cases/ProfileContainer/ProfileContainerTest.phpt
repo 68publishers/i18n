@@ -4,13 +4,16 @@ declare(strict_types=1);
 
 namespace SixtyEightPublishers\i18n\Tests\Cases\ProfileContainer;
 
-use Tester;
 use Mockery;
-use SixtyEightPublishers;
+use Tester\Assert;
+use Tester\TestCase;
+use SixtyEightPublishers\i18n\Profile\ProfileInterface;
+use SixtyEightPublishers\i18n\ProfileContainer\ProfileContainer;
+use SixtyEightPublishers\i18n\Exception\InvalidArgumentException;
 
 require __DIR__ . '/../../bootstrap.php';
 
-final class ProfileContainerTest extends Tester\TestCase
+final class ProfileContainerTest extends TestCase
 {
 	/** @var array  */
 	private $profiles = [];
@@ -36,7 +39,7 @@ final class ProfileContainerTest extends Tester\TestCase
 		parent::setUp();
 
 		foreach ([ 'default', 'foo', 'bar', 'baz' ] as $name) {
-			$this->profiles[$name] = $profile = Mockery::mock(SixtyEightPublishers\i18n\Profile\IProfile::class);
+			$this->profiles[$name] = $profile = Mockery::mock(ProfileInterface::class);
 			$profile->shouldReceive('getName')->andReturn($name);
 		}
 
@@ -44,7 +47,7 @@ final class ProfileContainerTest extends Tester\TestCase
 		$default = $profiles['default'];
 		unset($profiles['default']);
 
-		$this->profileContainer = new SixtyEightPublishers\i18n\ProfileContainer\ProfileContainer($default, array_values($profiles));
+		$this->profileContainer = new ProfileContainer($default, array_values($profiles));
 	}
 
 	/**
@@ -52,16 +55,16 @@ final class ProfileContainerTest extends Tester\TestCase
 	 */
 	public function testThrowExceptionOnMissingProfile(): void
 	{
-		$defaultProfile = Mockery::mock(SixtyEightPublishers\i18n\Profile\IProfile::class);
+		$defaultProfile = Mockery::mock(ProfileInterface::class);
 		$defaultProfile->shouldReceive('getName')->andReturn('default');
 
-		$profileContainer = new SixtyEightPublishers\i18n\ProfileContainer\ProfileContainer($defaultProfile, []);
+		$profileContainer = new ProfileContainer($defaultProfile, []);
 
-		Tester\Assert::exception(
+		Assert::exception(
 			function () use ($profileContainer) {
 				$profileContainer->get('foo');
 			},
-			SixtyEightPublishers\i18n\Exception\InvalidArgumentException::class,
+			InvalidArgumentException::class,
 			'Profile with name "foo" is not defined.'
 		);
 	}
@@ -71,7 +74,7 @@ final class ProfileContainerTest extends Tester\TestCase
 	 */
 	public function testGetProfileByName(): void
 	{
-		Tester\Assert::equal($this->profiles['foo'], $this->profileContainer->get('foo'));
+		Assert::equal($this->profiles['foo'], $this->profileContainer->get('foo'));
 	}
 
 	/**
@@ -79,7 +82,7 @@ final class ProfileContainerTest extends Tester\TestCase
 	 */
 	public function testGetDefaultProfile(): void
 	{
-		Tester\Assert::equal($this->profiles['default'], $this->profileContainer->get());
+		Assert::equal($this->profiles['default'], $this->profileContainer->get());
 	}
 
 	/**
@@ -87,7 +90,7 @@ final class ProfileContainerTest extends Tester\TestCase
 	 */
 	public function testToArrayMethod(): void
 	{
-		Tester\Assert::equal($this->profiles, $this->profileContainer->toArray());
+		Assert::equal($this->profiles, $this->profileContainer->toArray());
 	}
 
 	/**
@@ -95,7 +98,7 @@ final class ProfileContainerTest extends Tester\TestCase
 	 */
 	public function testIterator(): void
 	{
-		Tester\Assert::type(\Traversable::class, $this->profileContainer->getIterator());
+		Assert::type(\Traversable::class, $this->profileContainer->getIterator());
 	}
 }
 

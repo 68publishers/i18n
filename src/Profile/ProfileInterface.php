@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace SixtyEightPublishers\i18n\Profile;
 
-interface IProfile
+interface ProfileInterface
 {
 	/**
 	 * @return string

@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 namespace SixtyEightPublishers\i18n\Profile;
 
-use Nette;
-use SixtyEightPublishers;
+use Nette\SmartObject;
+use SixtyEightPublishers\i18n\Storage\ProfileStorageInterface;
+use SixtyEightPublishers\i18n\Exception\InvalidArgumentException;
 
 /**
  * @property-read string $name
@@ -16,17 +17,17 @@ use SixtyEightPublishers;
  * @property-read string    $defaultLanguage
  * @property-read string    $defaultCurrency
  */
-final class ActiveProfile implements IProfile
+final class ActiveProfile implements ProfileInterface
 {
-	use Nette\SmartObject;
+	use SmartObject;
 
-	/** @var \SixtyEightPublishers\i18n\Profile\IProfile  */
+	/** @var \SixtyEightPublishers\i18n\Profile\ProfileInterface  */
 	private $profile;
 
 	/** @var \SixtyEightPublishers\i18n\Profile\ActiveProfileChangeNotifier  */
 	private $notifier;
 
-	/** @var \SixtyEightPublishers\i18n\Storage\IProfileStorage  */
+	/** @var \SixtyEightPublishers\i18n\Storage\ProfileStorageInterface  */
 	private $profileStorage;
 
 	/** @var NULL|string */
@@ -48,24 +49,24 @@ final class ActiveProfile implements IProfile
 	private $defaultCurrency;
 
 	/**
-	 * @param \SixtyEightPublishers\i18n\Profile\IProfile                    $profile
+	 * @param \SixtyEightPublishers\i18n\Profile\ProfileInterface            $profile
 	 * @param \SixtyEightPublishers\i18n\Profile\ActiveProfileChangeNotifier $notifier
-	 * @param \SixtyEightPublishers\i18n\Storage\IProfileStorage             $profileStorage
+	 * @param \SixtyEightPublishers\i18n\Storage\ProfileStorageInterface     $profileStorage
 	 */
 	public function __construct(
-		IProfile $profile,
+		ProfileInterface $profile,
 		ActiveProfileChangeNotifier $notifier,
-		SixtyEightPublishers\i18n\Storage\IProfileStorage $profileStorage
+		ProfileStorageInterface $profileStorage
 	) {
 		if (FALSE === $profile->isEnabled()) {
-			throw new SixtyEightPublishers\i18n\Exception\InvalidArgumentException(sprintf(
+			throw new InvalidArgumentException(sprintf(
 				'Profile "%s" can\'t be set as active because its disabled.',
 				$profile->getName()
 			));
 		}
 
 		if (0 >= count($profile->getCountries()) || 0 >= count($profile->getLanguages()) || 0 >= count($profile->getCurrencies())) {
-			throw new SixtyEightPublishers\i18n\Exception\InvalidArgumentException(sprintf(
+			throw new InvalidArgumentException(sprintf(
 				'Invalid profile "%s" passed, profile must contains almost one country, language and currency.',
 				$profile->getName()
 			));
@@ -142,8 +143,8 @@ final class ActiveProfile implements IProfile
 	 */
 	public function changeCountry(string $country, bool $persist = TRUE): self
 	{
-		if (!in_array($country, $this->getCountries())) {
-			throw new SixtyEightPublishers\i18n\Exception\InvalidArgumentException(sprintf(
+		if (!in_array($country, $this->getCountries(), TRUE)) {
+			throw new InvalidArgumentException(sprintf(
 				'Country with code "%s" is not defined in active profile.',
 				$country
 			));
@@ -169,7 +170,7 @@ final class ActiveProfile implements IProfile
 	 */
 	public function changeLanguage(string $language, bool $persist = TRUE): self
 	{
-		if (!in_array($language, $this->getLanguages())) {
+		if (!in_array($language, $this->getLanguages(), TRUE)) {
 			if (is_string($language)) {
 				foreach ($this->getLanguages() as $available) {
 					if (substr($available, 0, 2) === substr($language, 0, 2)) {
@@ -178,7 +179,7 @@ final class ActiveProfile implements IProfile
 				}
 			}
 
-			throw new SixtyEightPublishers\i18n\Exception\InvalidArgumentException(sprintf(
+			throw new InvalidArgumentException(sprintf(
 				'Language with code "%s" is not defined in active profile.',
 				$language
 			));
@@ -204,8 +205,8 @@ final class ActiveProfile implements IProfile
 	 */
 	public function changeCurrency(string $currency, bool $persist = TRUE): self
 	{
-		if (!in_array($currency, $this->getCurrencies())) {
-			throw new SixtyEightPublishers\i18n\Exception\InvalidArgumentException(sprintf(
+		if (!in_array($currency, $this->getCurrencies(), TRUE)) {
+			throw new InvalidArgumentException(sprintf(
 				'Currency with code "%s" is not defined in active profile.',
 				$currency
 			));
@@ -221,8 +222,6 @@ final class ActiveProfile implements IProfile
 
 		return $this;
 	}
-
-	/***************** interface \SixtyEightPublishers\i18n\Profile\Profile\IProfile *****************/
 
 	/**
 	 * {@inheritdoc}

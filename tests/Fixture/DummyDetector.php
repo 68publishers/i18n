@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace SixtyEightPublishers\i18n\Tests\Fixture;
 
-use SixtyEightPublishers;
+use SixtyEightPublishers\i18n\Profile\ProfileInterface;
+use SixtyEightPublishers\i18n\Detector\DetectorInterface;
+use SixtyEightPublishers\i18n\ProfileContainer\ProfileContainerInterface;
 
-final class DummyDetector implements SixtyEightPublishers\i18n\Detector\IDetector
+final class DummyDetector implements DetectorInterface
 {
 	/**
 	 * @param mixed $foo
@@ -20,7 +22,7 @@ final class DummyDetector implements SixtyEightPublishers\i18n\Detector\IDetecto
 	/**
 	 * {@inheritdoc}
 	 */
-	public function detect(SixtyEightPublishers\i18n\ProfileContainer\IProfileContainer $profileContainer): ?SixtyEightPublishers\i18n\Profile\IProfile
+	public function detect(ProfileContainerInterface $profileContainer): ?ProfileInterface
 	{
 		return NULL;
 	}
