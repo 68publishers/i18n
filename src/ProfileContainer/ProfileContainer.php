@@ -4,24 +4,26 @@ declare(strict_types=1);
 
 namespace SixtyEightPublishers\i18n\ProfileContainer;
 
-use Nette;
-use SixtyEightPublishers;
+use ArrayIterator;
+use Nette\SmartObject;
+use SixtyEightPublishers\i18n\Profile\ProfileInterface;
+use SixtyEightPublishers\i18n\Exception\InvalidArgumentException;
 
-final class ProfileContainer implements IProfileContainer
+final class ProfileContainer implements ProfileContainerInterface
 {
-	use Nette\SmartObject;
+	use SmartObject;
 
-	/** @var \SixtyEightPublishers\i18n\Profile\IProfile  */
+	/** @var \SixtyEightPublishers\i18n\Profile\ProfileInterface  */
 	private $defaultProfile;
 
-	/** @var \SixtyEightPublishers\i18n\Profile\IProfile[] */
+	/** @var \SixtyEightPublishers\i18n\Profile\ProfileInterface[] */
 	private $profiles = [];
 
 	/**
-	 * @param \SixtyEightPublishers\i18n\Profile\IProfile   $defaultProfile
-	 * @param \SixtyEightPublishers\i18n\Profile\IProfile[] $profiles
+	 * @param \SixtyEightPublishers\i18n\Profile\ProfileInterface   $defaultProfile
+	 * @param \SixtyEightPublishers\i18n\Profile\ProfileInterface[] $profiles
 	 */
-	public function __construct(SixtyEightPublishers\i18n\Profile\IProfile $defaultProfile, array $profiles)
+	public function __construct(ProfileInterface $defaultProfile, array $profiles)
 	{
 		$this->defaultProfile = $defaultProfile;
 
@@ -33,28 +35,26 @@ final class ProfileContainer implements IProfileContainer
 	}
 
 	/**
-	 * @param \SixtyEightPublishers\i18n\Profile\IProfile $profile
+	 * @param \SixtyEightPublishers\i18n\Profile\ProfileInterface $profile
 	 *
 	 * @return void
 	 */
-	private function addProfile(SixtyEightPublishers\i18n\Profile\IProfile $profile): void
+	private function addProfile(ProfileInterface $profile): void
 	{
 		$this->profiles[$profile->getName()] = $profile;
 	}
 
-	/************* interface \SixtyEightPublishers\i18n\ProfileContainer\IProfileContainer *************/
-
 	/**
 	 * {@inheritdoc}
 	 */
-	public function get(?string $name = NULL): SixtyEightPublishers\i18n\Profile\IProfile
+	public function get(?string $name = NULL): ProfileInterface
 	{
 		if (NULL === $name) {
 			return $this->defaultProfile;
 		}
 
 		if (!isset($this->profiles[$name])) {
-			throw new SixtyEightPublishers\i18n\Exception\InvalidArgumentException(sprintf(
+			throw new InvalidArgumentException(sprintf(
 				'Profile with name "%s" is not defined.',
 				$name
 			));
@@ -74,8 +74,8 @@ final class ProfileContainer implements IProfileContainer
 	/**
 	 * {@inheritdoc}
 	 */
-	public function getIterator(): \ArrayIterator
+	public function getIterator(): ArrayIterator
 	{
-		return new \ArrayIterator($this->toArray());
+		return new ArrayIterator($this->toArray());
 	}
 }

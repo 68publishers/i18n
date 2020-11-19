@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace SixtyEightPublishers\i18n\Profile;
 
-use Nette;
+use Nette\SmartObject;
 
-final class Profile implements IProfile
+final class Profile implements ProfileInterface
 {
-	use Nette\SmartObject;
+	use SmartObject;
 
 	/** @var string  */
 	private $name;
@@ -45,8 +45,6 @@ final class Profile implements IProfile
 		$this->domains = $domains;
 		$this->enabled = $enabled;
 	}
-
-	/***************** interface \SixtyEightPublishers\i18n\Profile\Profile\IProfile *****************/
 
 	/**
 	 * @return string

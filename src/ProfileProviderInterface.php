@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace SixtyEightPublishers\i18n;
 
-use SixtyEightPublishers;
+use SixtyEightPublishers\i18n\Profile\ActiveProfile;
 
-interface IProfileProvider
+interface ProfileProviderInterface
 {
 	/**
 	 * @return \SixtyEightPublishers\i18n\Profile\ActiveProfile
 	 */
-	public function getProfile(): SixtyEightPublishers\i18n\Profile\ActiveProfile;
+	public function getProfile(): ActiveProfile;
 
 	/**
 	 * @return string[]

@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace SixtyEightPublishers\i18n\Detector;
 
-use Nette;
-use SixtyEightPublishers;
+use Nette\SmartObject;
+use Nette\Http\IRequest;
+use SixtyEightPublishers\i18n\Profile\ProfileInterface;
+use SixtyEightPublishers\i18n\ProfileContainer\ProfileContainerInterface;
 
-final class NetteRequestDetector implements IDetector
+final class NetteRequestDetector implements DetectorInterface
 {
-	use Nette\SmartObject;
+	use SmartObject;
 
 	/** @var \Nette\Http\IRequest  */
 	private $request;
@@ -17,17 +19,15 @@ final class NetteRequestDetector implements IDetector
 	/**
 	 * @param \Nette\Http\IRequest $request
 	 */
-	public function __construct(Nette\Http\IRequest $request)
+	public function __construct(IRequest $request)
 	{
 		$this->request = $request;
 	}
 
-	/************* interface \SixtyEightPublishers\i18n\Detector\IDetector *************/
-
 	/**
 	 * {@inheritdoc}
 	 */
-	public function detect(SixtyEightPublishers\i18n\ProfileContainer\IProfileContainer $profileContainer): ?SixtyEightPublishers\i18n\Profile\IProfile
+	public function detect(ProfileContainerInterface $profileContainer): ?ProfileInterface
 	{
 		$url = $this->request->getUrl()->getAbsoluteUrl();
 
@@ -37,7 +37,7 @@ final class NetteRequestDetector implements IDetector
 			}
 
 			foreach ($profile->getDomains() as $domain) {
-				$matches = null;
+				$matches = NULL;
 				if ($domain === $url || (FALSE !== preg_match('#' . $domain . '#', $url, $matches) && !empty($matches))) {
 					return $profile;
 				}

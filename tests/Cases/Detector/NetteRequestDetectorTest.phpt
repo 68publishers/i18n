@@ -4,25 +4,29 @@ declare(strict_types=1);
 
 namespace SixtyEightPublishers\i18n\Tests\Cases\Profile;
 
-use Nette;
-use Tester;
 use Mockery;
-use SixtyEightPublishers;
+use Tester\Assert;
+use Tester\TestCase;
+use Nette\Http\IRequest;
+use Nette\Http\UrlScript;
+use SixtyEightPublishers\i18n\Profile\ProfileInterface;
+use SixtyEightPublishers\i18n\Detector\NetteRequestDetector;
+use SixtyEightPublishers\i18n\ProfileContainer\ProfileContainerInterface;
 
 require __DIR__ . '/../../bootstrap.php';
 
-final class NetteRequestDetectorTest extends Tester\TestCase
+final class NetteRequestDetectorTest extends TestCase
 {
-	/** @var \SixtyEightPublishers\i18n\Profile\IProfile */
+	/** @var \SixtyEightPublishers\i18n\Profile\ProfileInterface */
 	private $fooProfile;
 
-	/** @var \SixtyEightPublishers\i18n\Profile\IProfile */
+	/** @var \SixtyEightPublishers\i18n\Profile\ProfileInterface */
 	private $barProfile;
 
-	/** @var \SixtyEightPublishers\i18n\Profile\IProfile */
+	/** @var \SixtyEightPublishers\i18n\Profile\ProfileInterface */
 	private $bazProfile;
 
-	/** @var \SixtyEightPublishers\i18n\ProfileContainer\IProfileContainer */
+	/** @var \SixtyEightPublishers\i18n\ProfileContainer\ProfileContainerInterface */
 	private $profileContainer;
 
 	/**
@@ -30,10 +34,10 @@ final class NetteRequestDetectorTest extends Tester\TestCase
 	 */
 	protected function setUp(): void
 	{
-		$this->fooProfile = $foo = Mockery::mock(SixtyEightPublishers\i18n\Profile\IProfile::class);
-		$this->barProfile = $bar = Mockery::mock(SixtyEightPublishers\i18n\Profile\IProfile::class);
-		$this->bazProfile = $baz = Mockery::mock(SixtyEightPublishers\i18n\Profile\IProfile::class);
-		$this->profileContainer = $container = Mockery::mock(SixtyEightPublishers\i18n\ProfileContainer\IProfileContainer::class);
+		$this->fooProfile = $foo = Mockery::mock(ProfileInterface::class);
+		$this->barProfile = $bar = Mockery::mock(ProfileInterface::class);
+		$this->bazProfile = $baz = Mockery::mock(ProfileInterface::class);
+		$this->profileContainer = $container = Mockery::mock(ProfileContainerInterface::class);
 
 		$foo->shouldReceive('getDomains')->andReturn([ 'example\.com\/foo' ]);
 		$foo->shouldReceive('isEnabled')->andReturn(TRUE);
@@ -64,7 +68,7 @@ final class NetteRequestDetectorTest extends Tester\TestCase
 	{
 		$detector = $this->createDetector('www.example.com/foo');
 
-		Tester\Assert::same($this->fooProfile, $detector->detect($this->profileContainer));
+		Assert::same($this->fooProfile, $detector->detect($this->profileContainer));
 	}
 
 	/**
@@ -74,7 +78,7 @@ final class NetteRequestDetectorTest extends Tester\TestCase
 	{
 		$detector = $this->createDetector('example.com/bar');
 
-		Tester\Assert::same($this->barProfile, $detector->detect($this->profileContainer));
+		Assert::same($this->barProfile, $detector->detect($this->profileContainer));
 	}
 
 	/**
@@ -84,7 +88,7 @@ final class NetteRequestDetectorTest extends Tester\TestCase
 	{
 		$detector = $this->createDetector('bar.example.com');
 
-		Tester\Assert::same($this->barProfile, $detector->detect($this->profileContainer));
+		Assert::same($this->barProfile, $detector->detect($this->profileContainer));
 	}
 
 	/**
@@ -94,7 +98,7 @@ final class NetteRequestDetectorTest extends Tester\TestCase
 	{
 		$detector = $this->createDetector('www.example.com/baz');
 
-		Tester\Assert::equal(NULL, $detector->detect($this->profileContainer));
+		Assert::equal(NULL, $detector->detect($this->profileContainer));
 	}
 
 	/**
@@ -102,9 +106,9 @@ final class NetteRequestDetectorTest extends Tester\TestCase
 	 *
 	 * @return \SixtyEightPublishers\i18n\Detector\NetteRequestDetector
 	 */
-	private function createDetector(string $url): SixtyEightPublishers\i18n\Detector\NetteRequestDetector
+	private function createDetector(string $url): NetteRequestDetector
 	{
-		return new SixtyEightPublishers\i18n\Detector\NetteRequestDetector(
+		return new NetteRequestDetector(
 			$this->createRequest($url)
 		);
 	}
@@ -114,10 +118,10 @@ final class NetteRequestDetectorTest extends Tester\TestCase
 	 *
 	 * @return \Nette\Http\IRequest
 	 */
-	private function createRequest(string $url): Nette\Http\IRequest
+	private function createRequest(string $url): IRequest
 	{
-		$urlScript = Mockery::mock(Nette\Http\UrlScript::class);
-		$request = Mockery::mock(Nette\Http\IRequest::class);
+		$urlScript = Mockery::mock(UrlScript::class);
+		$request = Mockery::mock(IRequest::class);
 
 		$urlScript->shouldReceive('getAbsoluteUrl')->once()->andReturn($url);
 		$request->shouldReceive('getUrl')->once()->andReturn($urlScript);

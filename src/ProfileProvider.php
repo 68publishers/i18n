@@ -4,8 +4,12 @@ declare(strict_types=1);
 
 namespace SixtyEightPublishers\i18n;
 
-use Nette;
-use SixtyEightPublishers;
+use Nette\SmartObject;
+use SixtyEightPublishers\i18n\Profile\ActiveProfile;
+use SixtyEightPublishers\i18n\Profile\ProfileInterface;
+use SixtyEightPublishers\i18n\Detector\DetectorInterface;
+use SixtyEightPublishers\i18n\Storage\ProfileStorageInterface;
+use SixtyEightPublishers\i18n\ProfileContainer\ProfileContainerInterface;
 
 /**
  * @property-read \SixtyEightPublishers\i18n\Profile\ActiveProfile $profile
@@ -13,17 +17,17 @@ use SixtyEightPublishers;
  * @property-read array $allCountries
  * @property-read array $allCurrencies
  */
-final class ProfileProvider implements IProfileProvider
+final class ProfileProvider implements ProfileProviderInterface
 {
-	use Nette\SmartObject;
+	use SmartObject;
 
-	/** @var \SixtyEightPublishers\i18n\Detector\IDetector  */
+	/** @var \SixtyEightPublishers\i18n\Detector\DetectorInterface  */
 	private $detector;
 
-	/** @var \SixtyEightPublishers\i18n\Storage\IProfileStorage  */
+	/** @var \SixtyEightPublishers\i18n\Storage\ProfileStorageInterface  */
 	private $profileStorage;
 
-	/** @var \SixtyEightPublishers\i18n\ProfileContainer\IProfileContainer  */
+	/** @var \SixtyEightPublishers\i18n\ProfileContainer\ProfileContainerInterface  */
 	private $profileContainer;
 
 	/** @var NULL|\SixtyEightPublishers\i18n\Profile\ActiveProfile */
@@ -39,14 +43,14 @@ final class ProfileProvider implements IProfileProvider
 	private $currencies;
 
 	/**
-	 * @param \SixtyEightPublishers\i18n\Detector\IDetector                 $detector
-	 * @param \SixtyEightPublishers\i18n\Storage\IProfileStorage            $profileStorage
-	 * @param \SixtyEightPublishers\i18n\ProfileContainer\IProfileContainer $profileContainer
+	 * @param \SixtyEightPublishers\i18n\Detector\DetectorInterface                 $detector
+	 * @param \SixtyEightPublishers\i18n\Storage\ProfileStorageInterface            $profileStorage
+	 * @param \SixtyEightPublishers\i18n\ProfileContainer\ProfileContainerInterface $profileContainer
 	 */
 	public function __construct(
-		Detector\IDetector $detector,
-		Storage\IProfileStorage $profileStorage,
-		ProfileContainer\IProfileContainer $profileContainer
+		DetectorInterface $detector,
+		ProfileStorageInterface $profileStorage,
+		ProfileContainerInterface $profileContainer
 	) {
 		$this->detector = $detector;
 		$this->profileStorage = $profileStorage;
@@ -63,12 +67,10 @@ final class ProfileProvider implements IProfileProvider
 		return array_values(array_unique(array_merge(...array_values(array_map($cb, $this->profileContainer->toArray())))));
 	}
 
-	/************* interface \SixtyEightPublishers\i18n\IProfileProvider *************/
-
 	/**
 	 * {@inheritdoc}
 	 */
-	public function getProfile(): SixtyEightPublishers\i18n\Profile\ActiveProfile
+	public function getProfile(): ActiveProfile
 	{
 		if (NULL !== $this->profile) {
 			return $this->profile;
@@ -88,7 +90,7 @@ final class ProfileProvider implements IProfileProvider
 			return $this->languages;
 		}
 
-		return $this->languages = $this->getUniqueElements(function (Profile\IProfile $profile) {
+		return $this->languages = $this->getUniqueElements(static function (ProfileInterface $profile) {
 			return $profile->getLanguages();
 		});
 	}
@@ -102,7 +104,7 @@ final class ProfileProvider implements IProfileProvider
 			return $this->countries;
 		}
 
-		return $this->countries = $this->getUniqueElements(function (Profile\IProfile $profile) {
+		return $this->countries = $this->getUniqueElements(static function (ProfileInterface $profile) {
 			return $profile->getCountries();
 		});
 	}
@@ -116,7 +118,7 @@ final class ProfileProvider implements IProfileProvider
 			return $this->currencies;
 		}
 
-		return $this->currencies = $this->getUniqueElements(function (Profile\IProfile $profile) {
+		return $this->currencies = $this->getUniqueElements(static function (ProfileInterface $profile) {
 			return $profile->getCurrencies();
 		});
 	}

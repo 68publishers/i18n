@@ -4,15 +4,16 @@ declare(strict_types=1);
 
 namespace SixtyEightPublishers\i18n\Translation;
 
-use Kdyby;
-use Nette;
-use SixtyEightPublishers;
+use Nette\SmartObject;
+use Kdyby\Translation\Translator;
+use Kdyby\Translation\IUserLocaleResolver;
+use SixtyEightPublishers\i18n\ProfileProviderInterface;
 
-final class ProfileStorageResolver implements Kdyby\Translation\IUserLocaleResolver
+final class ProfileStorageResolver implements IUserLocaleResolver
 {
-	use Nette\SmartObject;
+	use SmartObject;
 
-	/** @var \SixtyEightPublishers\i18n\IProfileProvider  */
+	/** @var \SixtyEightPublishers\i18n\ProfileProviderInterface  */
 	private $profileProvider;
 
 	/** @var bool  */
@@ -22,23 +23,21 @@ final class ProfileStorageResolver implements Kdyby\Translation\IUserLocaleResol
 	private $lock = FALSE;
 
 	/**
-	 * @param \SixtyEightPublishers\i18n\IProfileProvider $profileProvider
-	 * @param bool                                        $useDefault
+	 * @param \SixtyEightPublishers\i18n\ProfileProviderInterface $profileProvider
+	 * @param bool                                                $useDefault
 	 */
-	public function __construct(SixtyEightPublishers\i18n\IProfileProvider $profileProvider, bool $useDefault = FALSE)
+	public function __construct(ProfileProviderInterface $profileProvider, bool $useDefault = FALSE)
 	{
 		$this->profileProvider = $profileProvider;
 		$this->useDefault = $useDefault;
 	}
-
-	/*************** interface \Kdyby\Translation\IUserLocaleResolver ***************/
 
 	/**
 	 * @param \Kdyby\Translation\Translator $translator
 	 *
 	 * @return string
 	 */
-	public function resolve(Kdyby\Translation\Translator $translator): string
+	public function resolve(Translator $translator): string
 	{
 		$profile = $this->profileProvider->getProfile();
 		$locale = $profile->getLanguage($this->useDefault);

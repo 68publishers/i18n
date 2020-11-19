@@ -4,10 +4,29 @@ declare(strict_types=1);
 
 namespace SixtyEightPublishers\i18n\DI;
 
-use Nette;
-use SixtyEightPublishers;
+use Nette\DI\Helpers;
+use Nette\DI\Statement;
+use Nette\Utils\Strings;
+use Nette\Utils\Validators;
+use Nette\DI\CompilerExtension;
+use Nette\PhpGenerator\PhpLiteral;
+use SixtyEightPublishers\i18n\Profile\Profile;
+use SixtyEightPublishers\i18n\ProfileProvider;
+use SixtyEightPublishers\i18n\Diagnostics\Panel;
+use SixtyEightPublishers\i18n\Lists\ListOptions;
+use SixtyEightPublishers\i18n\Lists\LanguageList;
+use SixtyEightPublishers\i18n\ProfileProviderInterface;
+use SixtyEightPublishers\i18n\Detector\DetectorInterface;
+use SixtyEightPublishers\i18n\Detector\NetteRequestDetector;
+use SixtyEightPublishers\i18n\Storage\SessionProfileStorage;
+use SixtyEightPublishers\i18n\Storage\ProfileStorageInterface;
+use SixtyEightPublishers\i18n\Exception\ConfigurationException;
+use SixtyEightPublishers\i18n\ProfileContainer\ProfileContainer;
+use SixtyEightPublishers\i18n\Translation\ProfileStorageResolver;
+use SixtyEightPublishers\i18n\Profile\ActiveProfileChangeNotifier;
+use SixtyEightPublishers\i18n\ProfileContainer\ProfileContainerInterface;
 
-final class I18nExtension extends Nette\DI\CompilerExtension
+final class I18nExtension extends CompilerExtension
 {
 	/** @var array  */
 	private $defaults = [
@@ -22,8 +41,8 @@ final class I18nExtension extends Nette\DI\CompilerExtension
 			'fallback_language' => 'en',
 			'default_language' => NULL,
 		],
-		'storage' => SixtyEightPublishers\i18n\Storage\SessionProfileStorage::class,
-		'detector' => SixtyEightPublishers\i18n\Detector\NetteRequestDetector::class,
+		'storage' => SessionProfileStorage::class,
+		'detector' => NetteRequestDetector::class,
 	];
 
 	/** @var array  */
@@ -45,30 +64,30 @@ final class I18nExtension extends Nette\DI\CompilerExtension
 		$profiles = $config['profiles'];
 
 		# validations
-		Nette\Utils\Validators::assertField($config, 'profiles', 'array');
-		Nette\Utils\Validators::assertField($config, 'debugger', 'bool');
-		Nette\Utils\Validators::assertField($config['translations'], 'enabled', 'bool');
-		Nette\Utils\Validators::assertField($config['translations'], 'use_default', 'bool');
-		Nette\Utils\Validators::assertField($config, 'storage', 'string|' . Nette\DI\Statement::class);
-		Nette\Utils\Validators::assertField($config, 'detector', 'string|' . Nette\DI\Statement::class);
+		Validators::assertField($config, 'profiles', 'array');
+		Validators::assertField($config, 'debugger', 'bool');
+		Validators::assertField($config['translations'], 'enabled', 'bool');
+		Validators::assertField($config['translations'], 'use_default', 'bool');
+		Validators::assertField($config, 'storage', 'string|' . Statement::class);
+		Validators::assertField($config, 'detector', 'string|' . Statement::class);
 
-		Nette\Utils\Validators::assertField($config, 'lists', 'array');
-		Nette\Utils\Validators::assertField($config['lists'], 'vendorDir', 'string');
-		Nette\Utils\Validators::assertField($config['lists'], 'fallback_language', 'string');
-		Nette\Utils\Validators::assertField($config['lists'], 'default_language', 'null|string');
+		Validators::assertField($config, 'lists', 'array');
+		Validators::assertField($config['lists'], 'vendorDir', 'string');
+		Validators::assertField($config['lists'], 'fallback_language', 'string');
+		Validators::assertField($config['lists'], 'default_language', 'null|string');
 
 		if (empty($profiles)) {
-			throw new SixtyEightPublishers\i18n\Exception\ConfigurationException('You must define almost one profile in your configuration.');
+			throw new ConfigurationException('You must define almost one profile in your configuration.');
 		}
 
 		# ActiveProfile Change Notifier
 		$builder->addDefinition($this->prefix('active_profile_change_notifier'))
-			->setType(SixtyEightPublishers\i18n\Profile\ActiveProfileChangeNotifier::class);
+			->setType(ActiveProfileChangeNotifier::class);
 
 		# Register profile's storage
 		if (TRUE === $this->needRegister($config['storage'])) {
 			$config['storage'] = $builder->addDefinition($this->prefix('storage'))
-				->setType(SixtyEightPublishers\i18n\Storage\IProfileStorage::class)
+				->setType(ProfileStorageInterface::class)
 				->setFactory($config['storage'])
 				->setAutowired(FALSE);
 		}
@@ -76,7 +95,7 @@ final class I18nExtension extends Nette\DI\CompilerExtension
 		# Register profile's detector
 		if (TRUE === $this->needRegister($config['detector'])) {
 			$config['detector'] = $builder->addDefinition($this->prefix('detector'))
-				->setType(SixtyEightPublishers\i18n\Detector\IDetector::class)
+				->setType(DetectorInterface::class)
 				->setFactory($config['detector'])
 				->setAutowired(FALSE);
 		}
@@ -91,8 +110,8 @@ final class I18nExtension extends Nette\DI\CompilerExtension
 
 		# register container
 		$profileContainer = $builder->addDefinition($this->prefix('profile_container'))
-			->setType(SixtyEightPublishers\i18n\ProfileContainer\IProfileContainer::class)
-			->setFactory(SixtyEightPublishers\i18n\ProfileContainer\ProfileContainer::class, [
+			->setType(ProfileContainerInterface::class)
+			->setFactory(ProfileContainer::class, [
 				'defaultProfile' => $defaultProfile,
 				'profiles' => array_map(function ($config, $key) {
 					return $this->createProfile((string) $key, (array) $config);
@@ -102,8 +121,8 @@ final class I18nExtension extends Nette\DI\CompilerExtension
 
 		# register profile provider
 		$builder->addDefinition($this->prefix('profile_provider'))
-			->setType(SixtyEightPublishers\i18n\IProfileProvider::class)
-			->setFactory(SixtyEightPublishers\i18n\ProfileProvider::class, [
+			->setType(ProfileProviderInterface::class)
+			->setFactory(ProfileProvider::class, [
 				$config['detector'],
 				$config['storage'],
 				$profileContainer,
@@ -112,7 +131,7 @@ final class I18nExtension extends Nette\DI\CompilerExtension
 		# register lists
 
 		$listOptions = $builder->addDefinition($this->prefix('list_options'))
-			->setType(SixtyEightPublishers\i18n\Lists\ListOptions::class)
+			->setType(ListOptions::class)
 			->setArguments([
 				'vendorDir' => realpath($config['lists']['vendorDir']),
 				'fallbackLanguage' => $config['lists']['fallback_language'],
@@ -121,7 +140,7 @@ final class I18nExtension extends Nette\DI\CompilerExtension
 			->setAutowired(FALSE);
 
 		$builder->addDefinition($this->prefix('list.language'))
-			->setType(SixtyEightPublishers\i18n\Lists\LanguageList::class)
+			->setType(LanguageList::class)
 			->setArguments([
 				'options' => $listOptions,
 			]);
@@ -134,7 +153,7 @@ final class I18nExtension extends Nette\DI\CompilerExtension
 		# register tracy panel
 		if (TRUE === $config['debugger'] && interface_exists('Tracy\IBarPanel') && class_exists('Tracy\Bar')) {
 			$builder->addDefinition($this->prefix('tracy_panel'))
-				->setType(SixtyEightPublishers\i18n\Diagnostics\Panel::class)
+				->setType(Panel::class)
 				->setArguments([
 					'profileContainer' => $profileContainer,
 				])
@@ -165,7 +184,7 @@ final class I18nExtension extends Nette\DI\CompilerExtension
 		$args = func_get_args();
 
 		/** @noinspection PhpInternalEntityUsedInspection */
-		$args[0] = Nette\DI\Helpers::expand($expected, $this->getContainerBuilder()->parameters);
+		$args[0] = Helpers::expand($expected, $this->getContainerBuilder()->parameters);
 
 		return parent::validateConfig(...$args);
 	}
@@ -177,7 +196,7 @@ final class I18nExtension extends Nette\DI\CompilerExtension
 	 */
 	private function needRegister($definition): bool
 	{
-		return (!is_string($definition) || !Nette\Utils\Strings::startsWith($definition, '@'));
+		return (!is_string($definition) || !Strings::startsWith($definition, '@'));
 	}
 
 	/**
@@ -192,7 +211,7 @@ final class I18nExtension extends Nette\DI\CompilerExtension
 		$extensions = $this->compiler->getExtensions($extensionClass = 'Kdyby\Translation\DI\TranslationExtension');
 
 		if (empty($extensions)) {
-			throw new SixtyEightPublishers\i18n\Exception\ConfigurationException(sprintf(
+			throw new ConfigurationException(sprintf(
 				'You should register %s before %s.',
 				$extensionClass,
 				get_class($this)
@@ -203,7 +222,7 @@ final class I18nExtension extends Nette\DI\CompilerExtension
 		$extension = $extensions[array_keys($extensions)[0]];
 
 		$builder->addDefinition($this->prefix('translation_resolver'))
-			->setType(SixtyEightPublishers\i18n\Translation\ProfileStorageResolver::class)
+			->setType(ProfileStorageResolver::class)
 			->setArguments([
 				'useDefault' => $useDefault,
 			]);
@@ -215,7 +234,7 @@ final class I18nExtension extends Nette\DI\CompilerExtension
 
 		$builder->getDefinition($this->prefix('active_profile_change_notifier'))
 			->addSetup('addOnLanguageChangeListener', [
-				'listener' => new Nette\PhpGenerator\PhpLiteral('function ($profile) { $this->getByType(\'Kdyby\\Translation\\Translator\')->setLocale($profile->language); }'),
+				'listener' => new PhpLiteral('function ($profile) { $this->getByType(\'Kdyby\\Translation\\Translator\')->setLocale($profile->language); }'),
 			]);
 
 		# @todo: Add resolver to Tracy Bar
@@ -229,15 +248,15 @@ final class I18nExtension extends Nette\DI\CompilerExtension
 	 * @throws \Nette\Utils\AssertionException
 	 * @throws \SixtyEightPublishers\i18n\Exception\ConfigurationException
 	 */
-	private function createProfile(string $name, array $config): Nette\DI\Statement
+	private function createProfile(string $name, array $config): Statement
 	{
 		$config = $this->validateConfig($this->profileDefaults, $config);
 
-		Nette\Utils\Validators::assertField($config, 'language', 'string|array');
-		Nette\Utils\Validators::assertField($config, 'country', 'string|array');
-		Nette\Utils\Validators::assertField($config, 'currency', 'string|array');
-		Nette\Utils\Validators::assertField($config, 'domain', 'string|array');
-		Nette\Utils\Validators::assertField($config, 'enabled', 'bool');
+		Validators::assertField($config, 'language', 'string|array');
+		Validators::assertField($config, 'country', 'string|array');
+		Validators::assertField($config, 'currency', 'string|array');
+		Validators::assertField($config, 'domain', 'string|array');
+		Validators::assertField($config, 'enabled', 'bool');
 
 		$language = is_array($config['language']) ? $config['language'] : [ $config['language'] ];
 		$country = is_array($config['country']) ? $config['country'] : [ $config['country'] ];
@@ -249,7 +268,7 @@ final class I18nExtension extends Nette\DI\CompilerExtension
 				continue;
 			}
 
-			throw new SixtyEightPublishers\i18n\Exception\ConfigurationException(sprintf(
+			throw new ConfigurationException(sprintf(
 				'Please define almost one %s for configuration key %s.profiles.%s.%s',
 				$k,
 				$this->name,
@@ -258,7 +277,7 @@ final class I18nExtension extends Nette\DI\CompilerExtension
 			));
 		}
 
-		return new Nette\DI\Statement(SixtyEightPublishers\i18n\Profile\Profile::class, [
+		return new Statement(Profile::class, [
 			'name' => $name,
 			'languages' => $language,
 			'countries' => $country,

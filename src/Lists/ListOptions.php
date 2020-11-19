@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 namespace SixtyEightPublishers\i18n\Lists;
 
-use Nette;
-use SixtyEightPublishers;
+use Throwable;
+use Nette\SmartObject;
+use SixtyEightPublishers\i18n\ProfileProviderInterface;
 
 /**
  * @property-read string $vendorDir
@@ -15,9 +16,9 @@ use SixtyEightPublishers;
  */
 final class ListOptions
 {
-	use Nette\SmartObject;
+	use SmartObject;
 
-	/** @var \SixtyEightPublishers\i18n\IProfileProvider  */
+	/** @var \SixtyEightPublishers\i18n\ProfileProviderInterface  */
 	private $profileProvider;
 
 	/** @var string  */
@@ -30,13 +31,13 @@ final class ListOptions
 	private $defaultLanguage;
 
 	/**
-	 * @param \SixtyEightPublishers\i18n\IProfileProvider $profileProvider
-	 * @param string                                      $vendorDir
-	 * @param string                                      $fallbackLanguage
-	 * @param string|NULL                                 $defaultLanguage
+	 * @param \SixtyEightPublishers\i18n\ProfileProviderInterface $profileProvider
+	 * @param string                                              $vendorDir
+	 * @param string                                              $fallbackLanguage
+	 * @param string|NULL                                         $defaultLanguage
 	 */
 	public function __construct(
-		SixtyEightPublishers\i18n\IProfileProvider $profileProvider,
+		ProfileProviderInterface $profileProvider,
 		string $vendorDir,
 		string $fallbackLanguage,
 		?string $defaultLanguage
@@ -78,7 +79,7 @@ final class ListOptions
 	{
 		try {
 			return $this->defaultLanguage ?? $this->profileProvider->getProfile()->language;
-		} catch (\Throwable $e) {
+		} catch (Throwable $e) {
 			trigger_error($e->getMessage(), E_USER_NOTICE);
 
 			return $this->fallbackLanguage;

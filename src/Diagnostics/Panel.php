@@ -4,25 +4,27 @@ declare(strict_types=1);
 
 namespace SixtyEightPublishers\i18n\Diagnostics;
 
-use Nette;
-use Tracy;
-use SixtyEightPublishers;
+use Tracy\IBarPanel;
+use Nette\Utils\Html;
+use Nette\SmartObject;
+use SixtyEightPublishers\i18n\ProfileProviderInterface;
+use SixtyEightPublishers\i18n\ProfileContainer\ProfileContainerInterface;
 
-final class Panel implements Tracy\IBarPanel
+final class Panel implements IBarPanel
 {
-	use Nette\SmartObject;
+	use SmartObject;
 
-	/** @var \SixtyEightPublishers\i18n\ProfileContainer\IProfileContainer  */
+	/** @var \SixtyEightPublishers\i18n\ProfileContainer\ProfileContainerInterface  */
 	private $profileContainer;
 
-	/** @var \SixtyEightPublishers\i18n\IProfileProvider  */
+	/** @var \SixtyEightPublishers\i18n\ProfileProviderInterface  */
 	private $profileProvider;
 
 	/**
-	 * @param \SixtyEightPublishers\i18n\ProfileContainer\IProfileContainer $profileContainer
-	 * @param \SixtyEightPublishers\i18n\IProfileProvider                   $profileProvider
+	 * @param \SixtyEightPublishers\i18n\ProfileContainer\ProfileContainerInterface $profileContainer
+	 * @param \SixtyEightPublishers\i18n\ProfileProviderInterface                   $profileProvider
 	 */
-	public function __construct(SixtyEightPublishers\i18n\ProfileContainer\IProfileContainer $profileContainer, SixtyEightPublishers\i18n\IProfileProvider $profileProvider)
+	public function __construct(ProfileContainerInterface $profileContainer, ProfileProviderInterface $profileProvider)
 	{
 		$this->profileContainer = $profileContainer;
 		$this->profileProvider = $profileProvider;
@@ -33,11 +35,11 @@ final class Panel implements Tracy\IBarPanel
 	 */
 	public function getTab(): string
 	{
-		return (string) Nette\Utils\Html::el('span title="i18n"')
+		return (string) Html::el('span title="i18n"')
 			->addHtml($this->getIcon())
 			->addHtml(
-				Nette\Utils\Html::el('span class=tracy-label')->setText($this->profileProvider->getProfile()->getName())
-		);
+				Html::el('span class=tracy-label')->setText($this->profileProvider->getProfile()->getName())
+			);
 	}
 
 	/**
@@ -46,29 +48,29 @@ final class Panel implements Tracy\IBarPanel
 	public function getPanel(): string
 	{
 		$panel = [];
-		$panel[] = Nette\Utils\Html::el('h2')->setText('Configured profiles:');
+		$panel[] = Html::el('h2')->setText('Configured profiles:');
 
-		$table = Nette\Utils\Html::el('table');
-		$table->addHtml(Nette\Utils\Html::el('thead')->addHtml(
-			Nette\Utils\Html::el('tr')
-			->addHtml(Nette\Utils\Html::el('th'))
-			->addHtml(Nette\Utils\Html::el('th')->setText('name'))
-			->addHtml(Nette\Utils\Html::el('th')->setText('country'))
-			->addHtml(Nette\Utils\Html::el('th')->setText('language'))
-			->addHtml(Nette\Utils\Html::el('th')->setText('currency'))
-			->addHtml(Nette\Utils\Html::el('th')->setText('domain'))
+		$table = Html::el('table');
+		$table->addHtml(Html::el('thead')->addHtml(
+			Html::el('tr')
+				->addHtml(Html::el('th'))
+				->addHtml(Html::el('th')->setText('name'))
+				->addHtml(Html::el('th')->setText('country'))
+				->addHtml(Html::el('th')->setText('language'))
+				->addHtml(Html::el('th')->setText('currency'))
+				->addHtml(Html::el('th')->setText('domain'))
 		));
-		$table->addHtml($tbody = Nette\Utils\Html::el('tbody'));
+		$table->addHtml($tbody = Html::el('tbody'));
 
 		foreach ($this->profileContainer->toArray() as $profile) {
 			$tbody->addHtml(
-				$tr = Nette\Utils\Html::el('tr')
-				->addHtml($firstCell = Nette\Utils\Html::el('td'))
-				->addHtml(Nette\Utils\Html::el('td')->setText($profile->getName()))
-				->addHtml(Nette\Utils\Html::el('td')->setHtml(implode('<br>', $profile->getCountries())))
-				->addHtml(Nette\Utils\Html::el('td')->setHtml(implode('<br>', $profile->getLanguages())))
-				->addHtml(Nette\Utils\Html::el('td')->setHtml(implode('<br>', $profile->getCurrencies())))
-				->addHtml(Nette\Utils\Html::el('td')->setHtml(implode('<br>', $profile->getDomains())))
+				$tr = Html::el('tr')
+				->addHtml($firstCell = Html::el('td'))
+				->addHtml(Html::el('td')->setText($profile->getName()))
+				->addHtml(Html::el('td')->setHtml(implode('<br>', $profile->getCountries())))
+				->addHtml(Html::el('td')->setHtml(implode('<br>', $profile->getLanguages())))
+				->addHtml(Html::el('td')->setHtml(implode('<br>', $profile->getCurrencies())))
+				->addHtml(Html::el('td')->setHtml(implode('<br>', $profile->getDomains())))
 			);
 
 			if ($profile->getName() === $this->profileProvider->getProfile()->getName()) {
@@ -83,9 +85,9 @@ final class Panel implements Tracy\IBarPanel
 		}
 
 		$panel[] = $table;
-		$h1 = Nette\Utils\Html::el('h1')->setText('i18n');
+		$h1 = Html::el('h1')->setText('i18n');
 
-		return $h1 . Nette\Utils\Html::el('div class="nette-inner tracy-inner sixtyEightPublishers-EnvironmentPanel"')->setHtml(implode(' ', $panel)) . $this->getStyles();
+		return $h1 . Html::el('div class="nette-inner tracy-inner sixtyEightPublishers-EnvironmentPanel"')->setHtml(implode(' ', $panel)) . $this->getStyles();
 	}
 
 	/**

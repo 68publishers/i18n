@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace SixtyEightPublishers\i18n\Profile;
 
-use Nette;
+use Nette\SmartObject;
 
 /**
  * @method void onLanguageChange(ActiveProfile $profile)
@@ -13,7 +13,7 @@ use Nette;
  */
 final class ActiveProfileChangeNotifier
 {
-	use Nette\SmartObject;
+	use SmartObject;
 
 	/** @var NULL|callable[] */
 	public $onLanguageChange;
