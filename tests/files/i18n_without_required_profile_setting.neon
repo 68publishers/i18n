@@ -1,7 +1,0 @@
-i18n:
-	debugger: no
-	profiles:
-		default:
-			# missing language
-			currency: [ CZK, EUR ]
-			country: [ CZ, SK ]
