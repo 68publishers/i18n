@@ -1,5 +1,11 @@
 # i18n
 
+[![Build Status][ico-travis]][link-travis]
+[![Quality Score][ico-code-quality]][link-code-quality]
+[![Coverage Status][ico-scrutinizer]][link-scrutinizer]
+[![Total Downloads][ico-downloads]][link-downloads]
+[![Latest Version on Packagist][ico-version]][link-packagist]
+
 This package helps you to deal with regions with different languages, currencies and countries. It could be helpful even if you have single region project.
 
 ## Installation
@@ -89,3 +95,15 @@ and
 ```bash
 $ composer run tests
 ```
+
+[ico-version]: https://img.shields.io/packagist/v/68publishers/i18n.svg?style=flat-square
+[ico-travis]: https://img.shields.io/travis/68publishers/i18n/master.svg?style=flat-square
+[ico-scrutinizer]: https://img.shields.io/scrutinizer/coverage/g/68publishers/i18n.svg?style=flat-square
+[ico-code-quality]: https://img.shields.io/scrutinizer/g/68publishers/i18n.svg?style=flat-square
+[ico-downloads]: https://img.shields.io/packagist/dt/68publishers/i18n.svg?style=flat-square
+
+[link-packagist]: https://packagist.org/packages/68publishers/i18n
+[link-travis]: https://travis-ci.com/68publishers/i18n
+[link-scrutinizer]: https://scrutinizer-ci.com/g/68publishers/i18n/code-structure
+[link-code-quality]: https://scrutinizer-ci.com/g/68publishers/i18n
+[link-downloads]: https://packagist.org/packages/68publishers/i18n
