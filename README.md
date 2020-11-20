@@ -7,21 +7,21 @@ This package helps you to deal with regions with different languages, currencies
 The best way to install 68publishers/i18n is using Composer:
 
 ```bash
-composer require 68publishers/i18n
+$ composer require 68publishers/i18n
 ```
 
 then you can register extension into DIC:
 
-```yaml
+```neon
 extensions:
-    i18n: SixtyEightPublishers\i18n\DI\I18nExtension
+    68publishers.i18n: SixtyEightPublishers\i18n\DI\I18nExtension(%debugMode%)
 ```
 
 ## Configuration
 
-```yaml
-environment:
-    profile:
+```neon
+68publishers.i18n:
+    profiles:
         europe:
             language: [ sk_SK, en_GB, de_DE, pl_PL ]
             currency: [ EUR, PLZ, GBP ]
@@ -31,40 +31,61 @@ environment:
             language: en_US
             currency: USD
             country: US
-			domain: 'example\.com\/na'
-			enabled: no # default is `yes`
-		default: # If the default profile doesn't exists, the first profile is taken as default
-			language: cs_CZ
-			currency: CZK
-			country: CZ
-			
-	debugger: yes # adds Tracy panel, default is parameter %debugMode%
-	translations:
-		enabled: yes # enable integration with kdyby/translation, default is `no`
-		use_default: yes # use language of default's profile if profile is not detected, default is `no`
-	
-	# if you want to use custom profile storage or profile detector:
-	storage: My\Custom\ProfileStorage
-	detector: My\Custom\Detector
+            domain: 'example\.com\/na'
+            enabled: no # default is `yes`
+        default: # If the default profile doesn't exists, the first profile is taken as default
+            language: cs_CZ
+            currency: CZK
+            country: CZ
+    lists:
+        fallback_language: en # default
+        default_language: null # default
+
+    translation_bridge:
+        locale_resolver:
+            enabled: yes # registers custom TranslatorLocaleResolver through 68publishers/translation-bridge extension
+            use_default: yes # use language of default's profile if profile is not detected, default is `no`
+            priority: 15
+
+    # if you want to use custom profile storage or profile detector:
+    storage: My\Custom\ProfileStorage
+    detector: My\Custom\Detector
 ```
 
-### Integration with Kdyby\Translation
+### Integration with 68publishers/translation-bridge
 
-This feature provides automatic evaluation of the locale parameter for `kdyby\translation` based on profile settings in the extension. 
-Default profile's language can be used if setting `translations.use_default` is set to `TRUE`.
-If is this setting set to `FALSE` default language will not be used and other resolvers will be invoked.
-Also if you change language via method `SixtyEightPublishers\i18n\Profile\ActiveProfile::changeLanguage()`, locale in Translator will be changed too.
+#### Translator Locale Resolving
+
+The Translator's locale can be resolved by the currently active profile.
+That is done with custom `TranslatorLocaleResolver` that is automatically registered if an option `translation_bridge.locale_resolver.enabled` is set to `TRUE`.
+
+#### Synchronization Between Profile's Language and Translator's Locale
+
+The Translator's locale is automatically changed when the active profile's language is changed.
+
+```php
+<?php
+
+/** @var \SixtyEightPublishers\i18n\Profile\ActiveProfile $activeProfile */
+/** @var \SixtyEightPublishers\TranslationBridge\Localization\TranslatorLocalizerInterface $localizer */
+
+$activeProfile->changeLanguage('en_GB');
+$localizer->getLocale(); # en_GB
+
+$activeProfile->changeLanguage('cs_CZ');
+$localizer->getLocale(); # cs_CZ
+```
 
 ## Contributing
 
 Before committing any changes, don't forget to run
 
 ```bash
-vendor/bin/php-cs-fixer fix --config=.php_cs.dist -v --dry-run
+$ vendor/bin/php-cs-fixer fix --config=.php_cs.dist -v --dry-run
 ```
 
 and
 
 ```bash
-vendor/bin/tester ./tests
+$ composer run tests
 ```

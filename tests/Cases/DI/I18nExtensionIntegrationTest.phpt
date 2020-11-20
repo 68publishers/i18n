@@ -7,18 +7,18 @@ namespace SixtyEightPublishers\i18n\Tests\Cases\DI;
 use Tracy\Bar;
 use Tester\Assert;
 use Tester\TestCase;
-use Nette\DI\Container;
+use Nette\DI\InvalidConfigurationException;
 use SixtyEightPublishers\i18n\Diagnostics\Panel;
 use SixtyEightPublishers\i18n\ProfileProviderInterface;
 use SixtyEightPublishers\i18n\Detector\DetectorInterface;
 use SixtyEightPublishers\i18n\Tests\Fixture\DummyDetector;
 use SixtyEightPublishers\i18n\Tests\Helper\ContainerFactory;
 use SixtyEightPublishers\i18n\Storage\ProfileStorageInterface;
-use SixtyEightPublishers\i18n\Exception\ConfigurationException;
 use SixtyEightPublishers\i18n\Tests\Fixture\DummyProfileStorage;
-use SixtyEightPublishers\i18n\Translation\ProfileStorageResolver;
 use SixtyEightPublishers\i18n\Profile\ActiveProfileChangeNotifier;
+use SixtyEightPublishers\i18n\Translation\TranslatorLocaleResolver;
 use SixtyEightPublishers\i18n\ProfileContainer\ProfileContainerInterface;
+use SixtyEightPublishers\TranslationBridge\Localization\TranslatorLocalizerInterface;
 
 require __DIR__ . '/../../bootstrap.php';
 
@@ -29,23 +29,23 @@ final class I18nExtensionIntegrationTest extends TestCase
 	 */
 	public function testBaseConfiguration(): void
 	{
-		$container = $this->createContainer(__METHOD__, __DIR__ . '/../../files/i18n.neon');
+		$container = ContainerFactory::createContainer(CONFIG_DIR . '/i18n.neon');
 
-		# autowired dependencies
-		Assert::noError(function () use ($container) {
+		# Autowired dependencies
+		Assert::noError(static function () use ($container) {
 			$container->getByType(ProfileProviderInterface::class);
 		});
 
-		Assert::noError(function () use ($container) {
+		Assert::noError(static function () use ($container) {
 			$container->getByType(ActiveProfileChangeNotifier::class);
 		});
 
-		# no-autowired dependencies
-		Assert::type(ProfileContainerInterface::class, $container->getService('i18n.profile_container'));
-		Assert::type(ProfileStorageInterface::class, $container->getService('i18n.storage'));
-		Assert::type(DetectorInterface::class, $container->getService('i18n.detector'));
+		# Non autowired dependencies
+		Assert::type(ProfileContainerInterface::class, $container->getService('68publishers.i18n.profile_container'));
+		Assert::type(ProfileStorageInterface::class, $container->getService('68publishers.i18n.storage'));
+		Assert::type(DetectorInterface::class, $container->getService('68publishers.i18n.detector'));
 
-		# tracy is disabled
+		# Tracy is disabled
 		/** @var \Tracy\Bar $bar */
 		$bar = $container->getByType(Bar::class);
 
@@ -53,9 +53,9 @@ final class I18nExtensionIntegrationTest extends TestCase
 
 		# check if defined properties are successfully passed
 		/** @var \SixtyEightPublishers\i18n\ProfileContainer\ProfileContainerInterface $profiles */
-		$profiles = $container->getService('i18n.profile_container');
+		$profiles = $container->getService('68publishers.i18n.profile_container');
 
-		Assert::noError(function () use ($profiles) {
+		Assert::noError(static function () use ($profiles) {
 			$profiles->get();
 			$profiles->get('default');
 			$profiles->get('foo');
@@ -95,10 +95,10 @@ final class I18nExtensionIntegrationTest extends TestCase
 	 */
 	public function testProfileConfigurationWithoutDefaultProfileDefinition(): void
 	{
-		$container = $this->createContainer(__METHOD__, __DIR__ . '/../../files/i18n_without_default_profile_definition.neon');
+		$container = ContainerFactory::createContainer(CONFIG_DIR . '/i18n_without_default_profile_definition.neon');
 
 		/** @var \SixtyEightPublishers\i18n\ProfileContainer\ProfileContainerInterface $profiles */
-		$profiles = $container->getService('i18n.profile_container');
+		$profiles = $container->getService('68publishers.i18n.profile_container');
 
 		# first profile is matched as default
 		Assert::same($profiles->get(), $profiles->get('foo'));
@@ -110,11 +110,11 @@ final class I18nExtensionIntegrationTest extends TestCase
 	public function testThrowExceptionOnMissingProfilesConfiguration(): void
 	{
 		Assert::exception(
-			function () {
-				$this->createContainer(__METHOD__);
+			static function () {
+				ContainerFactory::createContainer(CONFIG_DIR . '/i18n_without_profiles.neon');
 			},
-			ConfigurationException::class,
-			'You must define almost one profile in your configuration.'
+			InvalidConfigurationException::class,
+			'#(.*)' . preg_quote('You must define almost one profile in your configuration.', '#') . '(.*)#i'
 		);
 	}
 
@@ -124,11 +124,11 @@ final class I18nExtensionIntegrationTest extends TestCase
 	public function testThrowExceptionOnMissingRequiredProfileSetting(): void
 	{
 		Assert::exception(
-			function () {
-				$this->createContainer(__METHOD__, __DIR__ . '/../../files/i18n_without_required_profile_setting.neon');
+			static function () {
+				ContainerFactory::createContainer(CONFIG_DIR . '/i18n_without_required_profile_setting.neon');
 			},
-			ConfigurationException::class,
-			'Please define almost one language for configuration key i18n.profiles.default.language'
+			InvalidConfigurationException::class,
+			'#.*' . preg_quote('Almost one language must be defined.', '#') . '.*#i'
 		);
 	}
 
@@ -137,10 +137,10 @@ final class I18nExtensionIntegrationTest extends TestCase
 	 */
 	public function testCustomStorageAndDetector(): void
 	{
-		$container = $this->createContainer(__METHOD__, __DIR__ . '/../../files/i18n_with_custom_storage_and_detector.neon');
+		$container = ContainerFactory::createContainer(CONFIG_DIR . '/i18n_with_custom_storage_and_detector.neon');
 
-		Assert::type(DummyProfileStorage::class, $container->getService('i18n.storage'));
-		Assert::type(DummyDetector::class, $container->getService('i18n.detector'));
+		Assert::type(DummyProfileStorage::class, $container->getService('68publishers.i18n.storage'));
+		Assert::type(DummyDetector::class, $container->getService('68publishers.i18n.detector'));
 	}
 
 	/**
@@ -148,37 +148,33 @@ final class I18nExtensionIntegrationTest extends TestCase
 	 */
 	public function testDebuggerEnabled(): void
 	{
-		$container = $this->createContainer(__METHOD__, __DIR__ . '/../../files/i18n_with_debugger_enabled.neon');
+		$container = ContainerFactory::createContainer(CONFIG_DIR . '/i18n_with_debugger_enabled.neon');
 
 		/** @var \Tracy\Bar $bar */
 		$bar = $container->getByType(Bar::class);
 
-		Assert::type(
-			Panel::class,
-			$bar->getPanel(Panel::class)
-		);
+		Assert::type(Panel::class, $bar->getPanel(Panel::class));
 	}
 
 	/**
 	 * @return void
 	 */
-	public function testTranslationsEnabled(): void
+	public function testTranslationBridgeFeatures(): void
 	{
-		$container = $this->createContainer(__METHOD__, __DIR__ . '/../../files/i18n_with_translations_enabled.neon');
+		$container = ContainerFactory::createContainer(CONFIG_DIR . '/i18n_with_translation_bridge.neon');
 
-		Assert::type(ProfileStorageResolver::class, $container->getService('i18n.translation_resolver'));
-		# test chain resolver and dispatched event?
-	}
+		# Is resolver registered?
+		Assert::type(TranslatorLocaleResolver::class, $container->getService('68publishers.i18n.translator_locale_resolver'));
 
-	/**
-	 * @param string            $method
-	 * @param array|string|NULL $config
-	 *
-	 * @return \Nette\DI\Container
-	 */
-	private function createContainer(string $method, $config = NULL): Container
-	{
-		return ContainerFactory::createContainer(static::class . '.' . $method, $config);
+		# Test synchronization between Profiles and Translator
+		$profileProvider = $container->getByType(ProfileProviderInterface::class);
+		$localizer = $container->getByType(TranslatorLocalizerInterface::class);
+
+		Assert::same('cs', $localizer->getLocale());
+
+		$profileProvider->getProfile()->changeLanguage('sk_SK');
+
+		Assert::same('sk_SK', $localizer->getLocale());
 	}
 }
 

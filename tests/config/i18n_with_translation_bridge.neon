@@ -1,0 +1,24 @@
+extensions:
+	contributte.translation: Contributte\Translation\DI\TranslationExtension
+	68publishers.i18n: SixtyEightPublishers\i18n\DI\I18nExtension(yes)
+	68publishers.translation_bridge: SixtyEightPublishers\TranslationBridge\Bridge\Contributte\DI\TranslationBridgeExtension
+
+contributte.translation:
+	locales:
+		default: cs
+		whitelist:
+			- cs
+			- sk
+	localeResolvers: []
+
+68publishers.i18n:
+	profiles:
+		default:
+			language: [ cs_CZ, sk_SK ]
+			currency: [ CZK, EUR ]
+			country: [ CZ, SK ]
+	translation_bridge:
+		locale_resolver:
+			enabled: yes
+			use_default: false
+			priority: 100

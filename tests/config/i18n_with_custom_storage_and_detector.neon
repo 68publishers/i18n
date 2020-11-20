@@ -1,5 +1,7 @@
-i18n:
-	debugger: no
+extensions:
+	68publishers.i18n: SixtyEightPublishers\i18n\DI\I18nExtension(no)
+
+68publishers.i18n:
 	profiles:
 		default:
 			language: [ cs_CZ, sk_SK ]

@@ -78,7 +78,7 @@ final class ListOptions
 	public function getResolvedLanguage(): string
 	{
 		try {
-			return $this->defaultLanguage ?? $this->profileProvider->getProfile()->language;
+			return $this->defaultLanguage ?? $this->profileProvider->getProfile()->language ?? $this->fallbackLanguage;
 		} catch (Throwable $e) {
 			trigger_error($e->getMessage(), E_USER_NOTICE);
 

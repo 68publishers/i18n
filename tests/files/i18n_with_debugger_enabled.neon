@@ -1,7 +1,0 @@
-i18n:
-	debugger: yes
-	profiles:
-		default:
-			language: [ cs_CZ ]
-			currency: [ CZK ]
-			country: [ CZ ]

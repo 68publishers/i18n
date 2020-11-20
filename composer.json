@@ -14,23 +14,27 @@
 		}
 	],
 	"require": {
-		"php": "~7.1",
+		"php": "^7.3",
 		"ext-json": "*",
-		"nette/di": "~2.4",
-		"nette/http": "~2.4",
-		"nette/utils": "~2.4",
+		"nette/di": "^3.0.3",
+		"nette/http": "^3.0",
+		"nette/schema": "^1.0.2",
+		"nette/utils": "^3.0",
 		"umpirsky/locale-list": "^1.0"
 	},
 	"require-dev": {
+		"68publishers/translation-bridge": "^1.2.1",
+		"contributte/translation": "^0.8.1",
 		"friendsofphp/php-cs-fixer": "^2.0",
-		"nette/tester": "^2.2",
-		"mockery/mockery": "^1.2",
-		"tracy/tracy": "^2.6",
-		"kdyby/translation": "^2.6@dev"
+		"mockery/mockery": "^1.4",
+		"nette/bootstrap": "^3.0",
+		"nette/tester": "^2.3.4",
+		"roave/security-advisories": "dev-master",
+		"tracy/tracy": "^2.6"
 	},
 	"suggest": {
-		"tracy/tracy": "For debugger panel integration.",
-		"kdyby/translation": "For integration with Symfony Translator"
+		"68publishers/translation-bridge": "For integration with Translator component.",
+		"tracy/tracy": "A compiler extension adds a custom Panel if the Tracy is required."
 	},
 	"autoload": {
 		"psr-4": {
@@ -50,7 +54,13 @@
 			"@tests:lowest",
 			"@tests:highest"
 		],
-		"tests:lowest" : "composer update --no-progress --prefer-dist --prefer-lowest --prefer-stable && composer bin all update --no-progress --prefer-dist --prefer-lowest --prefer-stable && vendor/bin/tester ./tests",
-		"tests:highest" : "composer update --no-progress --prefer-dist --prefer-stable && composer bin all update --no-progress --prefer-dist --prefer-stable && vendor/bin/tester ./tests"
+		"tests:lowest" : [
+			"@composer update --no-progress --prefer-dist --prefer-lowest --prefer-stable",
+			"vendor/bin/tester ./tests"
+		],
+		"tests:highest" : [
+			"@composer update --no-progress --prefer-dist --prefer-stable",
+			"vendor/bin/tester ./tests"
+		]
 	}
 }

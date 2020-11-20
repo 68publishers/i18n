@@ -4,55 +4,116 @@ declare(strict_types=1);
 
 namespace SixtyEightPublishers\i18n\DI;
 
-use Nette\DI\Helpers;
-use Nette\DI\Statement;
-use Nette\Utils\Strings;
-use Nette\Utils\Validators;
+use Tracy\Bar;
+use ReflectionClass;
+use Tracy\IBarPanel;
+use Nette\Schema\Expect;
+use Nette\Schema\Schema;
+use ReflectionException;
 use Nette\DI\CompilerExtension;
+use Composer\Autoload\ClassLoader;
 use Nette\PhpGenerator\PhpLiteral;
+use Nette\DI\Definitions\Statement;
 use SixtyEightPublishers\i18n\Profile\Profile;
 use SixtyEightPublishers\i18n\ProfileProvider;
 use SixtyEightPublishers\i18n\Diagnostics\Panel;
 use SixtyEightPublishers\i18n\Lists\ListOptions;
 use SixtyEightPublishers\i18n\Lists\LanguageList;
+use SixtyEightPublishers\i18n\Profile\ActiveProfile;
 use SixtyEightPublishers\i18n\ProfileProviderInterface;
 use SixtyEightPublishers\i18n\Detector\DetectorInterface;
+use SixtyEightPublishers\i18n\Exception\RuntimeException;
 use SixtyEightPublishers\i18n\Detector\NetteRequestDetector;
 use SixtyEightPublishers\i18n\Storage\SessionProfileStorage;
 use SixtyEightPublishers\i18n\Storage\ProfileStorageInterface;
-use SixtyEightPublishers\i18n\Exception\ConfigurationException;
 use SixtyEightPublishers\i18n\ProfileContainer\ProfileContainer;
-use SixtyEightPublishers\i18n\Translation\ProfileStorageResolver;
+use SixtyEightPublishers\i18n\Exception\InvalidArgumentException;
 use SixtyEightPublishers\i18n\Profile\ActiveProfileChangeNotifier;
+use SixtyEightPublishers\i18n\Translation\TranslatorLocaleResolver;
 use SixtyEightPublishers\i18n\ProfileContainer\ProfileContainerInterface;
+use SixtyEightPublishers\TranslationBridge\DI\AbstractTranslationBridgeExtension;
+use SixtyEightPublishers\TranslationBridge\Localization\TranslatorLocalizerInterface;
+use SixtyEightPublishers\TranslationBridge\Localization\TranslatorLocaleResolverInterface;
 
 final class I18nExtension extends CompilerExtension
 {
-	/** @var array  */
-	private $defaults = [
-		'profiles' => [],
-		'debugger' => '%debugMode%',
-		'translations' => [
-			'enabled' => FALSE,
-			'use_default' => FALSE,
-		],
-		'lists' => [
-			'vendorDir' => '%appDir%/../vendor',
-			'fallback_language' => 'en',
-			'default_language' => NULL,
-		],
-		'storage' => SessionProfileStorage::class,
-		'detector' => NetteRequestDetector::class,
-	];
+	public const DEFAULT_PROFILE_NAME = 'default';
 
-	/** @var array  */
-	private $profileDefaults = [
-		'language' => [],
-		'currency' => [],
-		'country' => [],
-		'domain' =>  [],
-		'enabled' => TRUE,
-	];
+	/** @var bool  */
+	private $debugMode;
+
+	/** @var string  */
+	private $vendorDir;
+
+	/**
+	 * @param bool        $debugMode
+	 * @param string|NULL $vendorDir
+	 */
+	public function __construct(bool $debugMode = FALSE, ?string $vendorDir = NULL)
+	{
+		if (0 >= func_num_args()) {
+			throw new InvalidArgumentException(sprintf('Provide Debug mode, e.q. %s(%%consoleMode%%).', static::class));
+		}
+
+		$this->debugMode = $debugMode;
+		$this->vendorDir = $this->resolveVendorDir($vendorDir);
+	}
+
+	/**
+	 * @return \Nette\Schema\Schema
+	 */
+	public function getConfigSchema(): Schema
+	{
+		$profileAttributeExpectationFactory = static function (string $attribute) {
+			return Expect::anyOf(Expect::string(), Expect::arrayOf('string'))
+				->required()
+				->castTo('array')
+				->assert(static function (array $value) {
+					return !empty($value);
+				}, sprintf('Almost one %s must be defined.', $attribute));
+		};
+
+		$schema = Expect::structure([
+			'profiles' => Expect::arrayOf(Expect::structure([
+				'language' => $profileAttributeExpectationFactory('language'),
+				'currency' => $profileAttributeExpectationFactory('currency'),
+				'country' => $profileAttributeExpectationFactory('country'),
+				'domain' => Expect::anyOf(Expect::string(), Expect::arrayOf('string'))->default([])->castTo('array'),
+				'enabled' => Expect::bool(TRUE),
+			])),
+
+			'lists' => Expect::structure([
+				'fallback_language' => Expect::string('en'),
+				'default_language' => Expect::string()->nullable(),
+			]),
+
+			'storage' => Expect::anyOf(Expect::string(), Expect::type(Statement::class))
+				->default(SessionProfileStorage::class)
+				->before(static function ($def) {
+					return $def instanceof Statement ? $def : new Statement($def);
+				}),
+
+			'detector' => Expect::anyOf(Expect::string(), Expect::type(Statement::class))
+				->default(NetteRequestDetector::class)
+				->before(static function ($def) {
+					return $def instanceof Statement ? $def : new Statement($def);
+				}),
+
+			'translation_bridge' => Expect::structure([
+				'locale_resolver' => Expect::structure([
+					'enabled' => Expect::bool(FALSE),
+					'use_default' => Expect::bool(FALSE),
+					'priority' => Expect::int(15),
+				]),
+			]),
+		]);
+
+		$schema->assert(static function ($schema) {
+			return !empty($schema->profiles);
+		}, 'You must define almost one profile in your configuration.');
+
+		return $schema;
+	}
 
 	/**
 	 * {@inheritdoc}
@@ -60,105 +121,80 @@ final class I18nExtension extends CompilerExtension
 	public function loadConfiguration(): void
 	{
 		$builder = $this->getContainerBuilder();
-		$config = $this->validateConfig($this->defaults);
-		$profiles = $config['profiles'];
-
-		# validations
-		Validators::assertField($config, 'profiles', 'array');
-		Validators::assertField($config, 'debugger', 'bool');
-		Validators::assertField($config['translations'], 'enabled', 'bool');
-		Validators::assertField($config['translations'], 'use_default', 'bool');
-		Validators::assertField($config, 'storage', 'string|' . Statement::class);
-		Validators::assertField($config, 'detector', 'string|' . Statement::class);
-
-		Validators::assertField($config, 'lists', 'array');
-		Validators::assertField($config['lists'], 'vendorDir', 'string');
-		Validators::assertField($config['lists'], 'fallback_language', 'string');
-		Validators::assertField($config['lists'], 'default_language', 'null|string');
-
-		if (empty($profiles)) {
-			throw new ConfigurationException('You must define almost one profile in your configuration.');
-		}
 
 		# ActiveProfile Change Notifier
 		$builder->addDefinition($this->prefix('active_profile_change_notifier'))
 			->setType(ActiveProfileChangeNotifier::class);
 
 		# Register profile's storage
-		if (TRUE === $this->needRegister($config['storage'])) {
-			$config['storage'] = $builder->addDefinition($this->prefix('storage'))
-				->setType(ProfileStorageInterface::class)
-				->setFactory($config['storage'])
-				->setAutowired(FALSE);
-		}
+		$builder->addDefinition($this->prefix('storage'))
+			->setType(ProfileStorageInterface::class)
+			->setFactory($this->config->storage)
+			->setAutowired(FALSE);
 
 		# Register profile's detector
-		if (TRUE === $this->needRegister($config['detector'])) {
-			$config['detector'] = $builder->addDefinition($this->prefix('detector'))
-				->setType(DetectorInterface::class)
-				->setFactory($config['detector'])
-				->setAutowired(FALSE);
-		}
+		$builder->addDefinition($this->prefix('detector'))
+			->setType(DetectorInterface::class)
+			->setFactory($this->config->detector)
+			->setAutowired(FALSE);
 
-		# create default Profile
-		if (isset($profiles['default'])) {
-			$defaultProfile = $this->createProfile('default', (array) $profiles['default']);
-			unset($profiles['default']);
+		# Create default Profile
+		$profiles = $this->config->profiles;
+
+		if (isset($profiles[self::DEFAULT_PROFILE_NAME])) {
+			$defaultProfile = $this->createProfile(self::DEFAULT_PROFILE_NAME, $profiles[self::DEFAULT_PROFILE_NAME]);
+			unset($profiles[self::DEFAULT_PROFILE_NAME]);
 		} else {
-			$defaultProfile = $this->createProfile(key($profiles), (array) array_shift($profiles));
+			$defaultProfile = $this->createProfile((string) key($profiles), array_shift($profiles));
 		}
 
-		# register container
-		$profileContainer = $builder->addDefinition($this->prefix('profile_container'))
+		# Register container
+		$builder->addDefinition($this->prefix('profile_container'))
 			->setType(ProfileContainerInterface::class)
 			->setFactory(ProfileContainer::class, [
 				'defaultProfile' => $defaultProfile,
 				'profiles' => array_map(function ($config, $key) {
-					return $this->createProfile((string) $key, (array) $config);
+					return $this->createProfile((string) $key, $config);
 				}, $profiles, array_keys($profiles)),
 			])
 			->setAutowired(FALSE);
 
-		# register profile provider
+		# Register profile provider
 		$builder->addDefinition($this->prefix('profile_provider'))
 			->setType(ProfileProviderInterface::class)
 			->setFactory(ProfileProvider::class, [
-				$config['detector'],
-				$config['storage'],
-				$profileContainer,
+				$this->prefix('@detector'),
+				$this->prefix('@storage'),
+				$this->prefix('@profile_container'),
 			]);
 
-		# register lists
-
-		$listOptions = $builder->addDefinition($this->prefix('list_options'))
+		# Register lists
+		$builder->addDefinition($this->prefix('list_options'))
 			->setType(ListOptions::class)
 			->setArguments([
-				'vendorDir' => realpath($config['lists']['vendorDir']),
-				'fallbackLanguage' => $config['lists']['fallback_language'],
-				'defaultLanguage' => $config['lists']['default_language'],
+				'vendorDir' => $this->vendorDir,
+				'fallbackLanguage' => $this->config->lists->fallback_language,
+				'defaultLanguage' => $this->config->lists->default_language,
 			])
 			->setAutowired(FALSE);
 
 		$builder->addDefinition($this->prefix('list.language'))
 			->setType(LanguageList::class)
 			->setArguments([
-				'options' => $listOptions,
+				'options' => $this->prefix('@list_options'),
 			]);
 
-		# register kdyby/translation integration
-		if (TRUE === $config['translations']['enabled']) {
-			$this->registerTranslations((bool) $config['translations']['use_default']);
-		}
-
-		# register tracy panel
-		if (TRUE === $config['debugger'] && interface_exists('Tracy\IBarPanel') && class_exists('Tracy\Bar')) {
+		# Register tracy panel
+		if ($this->debugMode && interface_exists(IBarPanel::class) && class_exists(Bar::class)) {
 			$builder->addDefinition($this->prefix('tracy_panel'))
 				->setType(Panel::class)
 				->setArguments([
-					'profileContainer' => $profileContainer,
+					'profileContainer' => $this->prefix('@profile_container'),
 				])
 				->setAutowired(FALSE);
 		}
+
+		$this->registerTranslationBridgeFeatures();
 	}
 
 	/**
@@ -169,121 +205,87 @@ final class I18nExtension extends CompilerExtension
 		$builder = $this->getContainerBuilder();
 
 		if (TRUE === $builder->hasDefinition($this->prefix('tracy_panel'))) {
-			$builder->getDefinitionByType('Tracy\Bar')
-				->addSetup('addPanel', [
-					'panel' => $this->prefix('@tracy_panel'),
-				]);
+			$builder->getDefinitionByType(Bar::class)
+				->addSetup('addPanel', [$this->prefix('@tracy_panel')]);
 		}
 	}
 
 	/**
-	 * {@inheritdoc}
-	 */
-	public function validateConfig(array $expected, array $config = NULL, $name = NULL): array
-	{
-		$args = func_get_args();
-
-		/** @noinspection PhpInternalEntityUsedInspection */
-		$args[0] = Helpers::expand($expected, $this->getContainerBuilder()->parameters);
-
-		return parent::validateConfig(...$args);
-	}
-
-	/**
-	 * @param mixed $definition
-	 *
-	 * @return bool
-	 */
-	private function needRegister($definition): bool
-	{
-		return (!is_string($definition) || !Strings::startsWith($definition, '@'));
-	}
-
-	/**
-	 * @param bool $useDefault
-	 *
 	 * @return void
-	 * @throws \SixtyEightPublishers\i18n\Exception\ConfigurationException
 	 */
-	protected function registerTranslations(bool $useDefault): void
+	private function registerTranslationBridgeFeatures(): void
 	{
-		$builder = $this->getContainerBuilder();
-		$extensions = $this->compiler->getExtensions($extensionClass = 'Kdyby\Translation\DI\TranslationExtension');
-
-		if (empty($extensions)) {
-			throw new ConfigurationException(sprintf(
-				'You should register %s before %s.',
-				$extensionClass,
-				get_class($this)
-			), E_USER_NOTICE);
+		if (empty($this->compiler->getExtensions(AbstractTranslationBridgeExtension::class))) {
+			return;
 		}
 
-		/** @var \Nette\DI\CompilerExtension $extension */
-		$extension = $extensions[array_keys($extensions)[0]];
+		$builder = $this->getContainerBuilder();
 
-		$builder->addDefinition($this->prefix('translation_resolver'))
-			->setType(ProfileStorageResolver::class)
-			->setArguments([
-				'useDefault' => $useDefault,
-			]);
-
-		$chain = $builder->getDefinition($extension->name . '.userLocaleResolver');
-		$chain->addSetup('addResolver', [
-			$this->prefix('@translation_resolver'),
-		]);
-
+		# Automatically change the Translator's locale when the ActiveProfile's locale is changed
 		$builder->getDefinition($this->prefix('active_profile_change_notifier'))
-			->addSetup('addOnLanguageChangeListener', [
-				'listener' => new PhpLiteral('function ($profile) { $this->getByType(\'Kdyby\\Translation\\Translator\')->setLocale($profile->language); }'),
+			->addSetup('$service->addOnLanguageChangeListener(function (? $profile) { $this->getByType(?::class)->setLocale($profile->language); })', [
+				new PhpLiteral(ActiveProfile::class),
+				new PhpLiteral(TranslatorLocalizerInterface::class),
 			]);
 
-		# @todo: Add resolver to Tracy Bar
+		$localeResolverConfig = $this->config->translation_bridge->locale_resolver;
+
+		if (!$localeResolverConfig->enabled) {
+			return;
+		}
+
+		# Add Translator Locale Resolver
+		$builder->addDefinition($this->prefix('translator_locale_resolver'))
+			->setType(TranslatorLocaleResolverInterface::class)
+			->setFactory(TranslatorLocaleResolver::class, [
+				'useDefault' => $localeResolverConfig->use_default,
+			])
+			->setAutowired(FALSE)
+			->addTag(AbstractTranslationBridgeExtension::TAG_TRANSLATOR_LOCALE_RESOLVER, $localeResolverConfig->priority);
 	}
 
 	/**
 	 * @param string $name
-	 * @param array  $config
+	 * @param object $config
 	 *
-	 * @return \Nette\DI\Statement
-	 * @throws \Nette\Utils\AssertionException
-	 * @throws \SixtyEightPublishers\i18n\Exception\ConfigurationException
+	 * @return \Nette\DI\Definitions\Statement
 	 */
-	private function createProfile(string $name, array $config): Statement
+	private function createProfile(string $name, object $config): Statement
 	{
-		$config = $this->validateConfig($this->profileDefaults, $config);
+		return new Statement(Profile::class, [
+			'name' => $name,
+			'languages' => $config->language,
+			'countries' => $config->country,
+			'currencies' => $config->currency,
+			'domains' => $config->domain,
+			'enabled' => $config->enabled,
+		]);
+	}
 
-		Validators::assertField($config, 'language', 'string|array');
-		Validators::assertField($config, 'country', 'string|array');
-		Validators::assertField($config, 'currency', 'string|array');
-		Validators::assertField($config, 'domain', 'string|array');
-		Validators::assertField($config, 'enabled', 'bool');
+	/**
+	 * @param string|NULL $vendorDir
+	 *
+	 * @return string
+	 */
+	private function resolveVendorDir(?string $vendorDir = NULL): string
+	{
+		if (NULL !== $vendorDir) {
+			return $vendorDir;
+		}
 
-		$language = is_array($config['language']) ? $config['language'] : [ $config['language'] ];
-		$country = is_array($config['country']) ? $config['country'] : [ $config['country'] ];
-		$currency = is_array($config['currency']) ? $config['currency'] : [ $config['currency'] ];
-		$domain = is_array($config['domain']) ? $config['domain'] : [ $config['domain'] ];
-
-		foreach ([ 'language' => $language, 'country' => $country, 'currency' => $currency ] as $k => $v) {
-			if (!empty($v)) {
-				continue;
-			}
-
-			throw new ConfigurationException(sprintf(
-				'Please define almost one %s for configuration key %s.profiles.%s.%s',
-				$k,
-				$this->name,
-				$name,
-				$k
+		if (!class_exists(ClassLoader::class)) {
+			throw new RuntimeException(sprintf(
+				'Vendor directory can\'t be detected because the class %s can\'t be found. Please provide the vendor directory manually.',
+				ClassLoader::class
 			));
 		}
 
-		return new Statement(Profile::class, [
-			'name' => $name,
-			'languages' => $language,
-			'countries' => $country,
-			'currencies' => $currency,
-			'domains' => $domain,
-			'enabled' => $config['enabled'],
-		]);
+		try {
+			$reflection = new ReflectionClass(ClassLoader::class);
+
+			return dirname($reflection->getFileName(), 2);
+		} catch (ReflectionException $e) {
+			throw new RuntimeException('Vendor directory can\'t be detected. Please provide the vendor directory manually.', 0, $e);
+		}
 	}
 }
