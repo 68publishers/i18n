@@ -1,3 +1,5 @@
+> :warning: Warning! This package does not have active support, it exists only for the historical needs of the author.
+
 # i18n
 
 [![Build Status][ico-travis]][link-travis]
