@@ -86,7 +86,7 @@ abstract class AbstractList implements ListInterface
 	/**
 	 * {@inheritdoc}
 	 */
-	public function offsetSet($offset, $value)
+	public function offsetSet($offset, $value): void
 	{
 		throw new LogicException('Changes of statically defined list is not allowed.');
 	}
