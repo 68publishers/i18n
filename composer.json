@@ -19,7 +19,7 @@
 		"nette/di": "^3.0.3",
 		"nette/http": "^3.0",
 		"nette/schema": "^1.0.2",
-		"nette/utils": "^3.0",
+		"nette/utils": "^3.0 || ^4.0",
 		"umpirsky/locale-list": "^1.0"
 	},
 	"require-dev": {
